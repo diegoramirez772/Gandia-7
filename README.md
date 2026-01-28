@@ -2,7 +2,7 @@
 
 **Sistema Integral de Trazabilidad Ganadera**
 
-![Arquitectura GANDIA](./docs/images/portada.png)
+![Arquitectura GANDIA](docs/images/portada.png)
 
 > Infraestructura Digital Institucional para la Trazabilidad Ganadera Binacional México-USA
 
