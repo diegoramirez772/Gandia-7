@@ -216,11 +216,8 @@ function NewsletterInline({ isDark }: { isDark: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FOOTER PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
-interface FooterProps {
-  isDark: boolean
-}
-
-export default function Footer({ isDark }: FooterProps) {
+export default function Footer() {
+  const isDark = true // Footer siempre oscuro
   const navigate = useNavigate()
 
   const bg       = isDark ? '#0c0a09'   : '#F3F2EF'

@@ -28,7 +28,7 @@ function PublicLayout() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0c0a09]">
+    <div className="min-h-screen" style={{ background: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#0c0a09' : '#F5F4F3' }}>
       <Outlet />
     </div>
   )

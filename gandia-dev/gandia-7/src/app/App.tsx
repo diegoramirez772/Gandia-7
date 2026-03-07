@@ -6,6 +6,28 @@ import { UserProvider } from '../context/UserContext'
 import { NotificationsProvider } from '../context/NotificationsContext'
 import { supabase } from '../lib/supabaseClient'
 
+// ── Rutas donde el AuthHandler NO debe actuar ────────────────────────────────
+
+// 1. El Splash maneja su propia sesión — no interferir nunca
+// 2. El usuario navega la web pública intencionalmente — dejarlo navegar libre
+const IGNORE_ROUTES = [
+  '/splash',
+  '/home',
+  '/blog',
+  '/contacto',
+  '/recursos',
+  '/legal',
+  '/compliance',
+  '/modelo-operativo',
+]
+
+// 3. Ya está en área privada — no redirigir
+const PRIVATE_ROUTES = [
+  '/chat', '/historial', '/notificaciones', '/configuraciones',
+  '/voz', '/ayuda', '/plan', '/tramites', '/noticias', '/perfil',
+  '/onboarding', '/tour',
+]
+
 const AuthHandler = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -14,30 +36,27 @@ const AuthHandler = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔐 Auth event:', event, '@ path:', location.pathname)
 
+      // El Splash y las páginas públicas manejan su propio estado — no tocar
+      const ignored = IGNORE_ROUTES.some(r => location.pathname.startsWith(r))
+      if (ignored) return
+
+      // Admin y registro tienen su propio flujo
       if (location.pathname.startsWith('/admin')) return
       if (location.pathname.startsWith('/signup')) return
 
-      // ── Refresh de página o login: verificar si ya tiene perfil y redirigir ──
-      if (
-        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
-        session?.user
-      ) {
-        const user  = session.user
-        const email = user.email ?? ''
+      // Ya está en área privada — no redirigir
+      const isPrivate = PRIVATE_ROUTES.some(r => location.pathname.startsWith(r))
+      if (isPrivate) return
 
-        // Si ya está en una ruta privada, no redirigir
-        const privateRoutes = ['/chat', '/historial', '/notificaciones', '/configuraciones',
-          '/voz', '/ayuda', '/plan', '/tramites', '/noticias', '/perfil', '/onboarding']
-        const isAlreadyPrivate = privateRoutes.some(r => location.pathname.startsWith(r))
-        if (isAlreadyPrivate) return
+      // ── Desde /login u otras rutas de entrada ────────────────────────────
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
+        const email = session.user.email ?? ''
+        const hasProfile = email ? await checkProfileExists(email) : false
 
-        const alreadyHasProfile = email ? await checkProfileExists(email) : false
-
-        if (alreadyHasProfile) {
+        if (hasProfile) {
           try {
             const profile = await getCurrentProfile()
             if (profile?.status === 'approved') {
-              // Primera vez en el sistema → pantalla de configuración
               const onboardingDone = profile?.onboarding_completed ?? true
               navigate(onboardingDone ? '/chat' : '/onboarding', { replace: true })
             } else {
@@ -54,7 +73,7 @@ const AuthHandler = () => {
         }
 
         // Usuario nuevo sin perfil
-        const provider = (user.app_metadata?.provider as string | undefined) ?? 'email'
+        const provider = (session.user.app_metadata?.provider as string | undefined) ?? 'email'
         localStorage.setItem('signup-auth-method', provider)
         if (email) localStorage.setItem('signup-email', email)
         navigate('/signup/personal', { replace: true })

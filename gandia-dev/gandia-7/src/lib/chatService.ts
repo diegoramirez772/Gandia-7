@@ -14,7 +14,7 @@ import { supabase } from './supabaseClient'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ChatMode  = 'asistente' | 'noticias' | 'investigacion'
-export type ChatModel = 'acipe' | 'claude' | 'gpt4o' | 'gemini'
+export type ChatModel = 'acipe' | 'acipe-slim' | 'claude' | 'gpt4o' | 'gemini'
 export type MessageRole = 'user' | 'assistant' | 'system'
 
 export interface AttachedFile {

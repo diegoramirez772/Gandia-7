@@ -51,8 +51,7 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
 
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
 
-  // Mostrar solo las 5 más recientes en el panel
-  const visible = notifications.slice(0, 5)
+  const visible  = notifications.slice(0, 5)
   const noLeidas = unreadCount
 
   useEffect(() => {
@@ -84,11 +83,9 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap');
-
         .di { font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
         .di-serif { font-family: 'Instrument Serif', Georgia, serif; }
 
-        /* ── island container ── */
         .di-island {
           position: absolute;
           top: calc(100% + 10px);
@@ -96,25 +93,12 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           z-index: 60;
           width: 340px;
           max-width: calc(100vw - 1.5rem);
-
-          background: #0a0a0a;
-          border: 1px solid rgba(255,255,255,0.09);
-          border-radius: 28px;
-          box-shadow:
-            0 0 0 0.5px rgba(255,255,255,0.06),
-            0 24px 64px rgba(0,0,0,0.7),
-            0 4px 16px rgba(0,0,0,0.4);
-
           overflow: hidden;
-
-          /* closed → open */
           transform-origin: top right;
           transition:
-            opacity        280ms cubic-bezier(.16,1,.3,1),
-            transform      320ms cubic-bezier(.16,1,.3,1),
-            border-radius  320ms cubic-bezier(.16,1,.3,1),
-            max-height     380ms cubic-bezier(.16,1,.3,1);
-
+            opacity     280ms cubic-bezier(.16,1,.3,1),
+            transform   320ms cubic-bezier(.16,1,.3,1),
+            max-height  380ms cubic-bezier(.16,1,.3,1);
           opacity:    0;
           transform:  scale(0.88) translateY(-8px);
           max-height: 0;
@@ -124,45 +108,35 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           transform:  scale(1) translateY(0);
           max-height: 640px;
         }
-
-        /* ── content fade ── */
         .di-content {
           opacity: 0;
           transform: translateY(6px);
           transition: opacity 220ms 120ms ease, transform 220ms 120ms ease;
         }
-        .di-open .di-content {
-          opacity: 1;
-          transform: translateY(0);
-        }
+        .di-open .di-content { opacity: 1; transform: translateY(0); }
 
-        /* ── row entrance ── */
         @keyframes di-row-in {
           from { opacity: 0; transform: translateX(-6px); }
-          to   { opacity: 1; transform: translateX(0);    }
+          to   { opacity: 1; transform: translateX(0); }
         }
         .di-row { animation: di-row-in 220ms cubic-bezier(.16,1,.3,1) both; }
 
-        /* ── row dismiss ── */
         @keyframes di-dismiss {
           from { opacity: 1; max-height: 90px; transform: translateX(0) scale(1); }
-          to   { opacity: 0; max-height: 0;   transform: translateX(16px) scale(0.96); padding: 0; }
+          to   { opacity: 0; max-height: 0;    transform: translateX(16px) scale(0.96); padding: 0; }
         }
         .di-removing { animation: di-dismiss 300ms cubic-bezier(.4,0,1,1) both; overflow: hidden; }
 
-        /* ── scroll ── */
         .di-scroll::-webkit-scrollbar { width: 2px; }
-        .di-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
-        .di-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+        .di-scroll::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.2); border-radius: 999px; }
+        .di-scroll { scrollbar-width: thin; scrollbar-color: rgba(128,128,128,0.2) transparent; }
 
-        /* ── unread dot pulse ── */
         @keyframes di-pulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(47,175,143,0.5); }
           50%       { box-shadow: 0 0 0 4px rgba(47,175,143,0); }
         }
         .di-pulse { animation: di-pulse 2s ease infinite; }
 
-        /* ── glow chip ── */
         .di-chip {
           display: flex; align-items: center; justify-content: center;
           width: 28px; height: 28px;
@@ -171,15 +145,20 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           transition: transform 150ms ease;
         }
         .di-row:hover .di-chip { transform: scale(1.08); }
-
-        /* ── separator ── */
-        .di-sep { height: 1px; background: rgba(255,255,255,0.06); margin: 0 16px; }
       `}</style>
 
       {/* ── ISLAND ── */}
       <div
         ref={panelRef}
-        className={`di di-island ${rendered && isOpen ? 'di-open' : ''}`}
+        className={[
+          'di di-island',
+          rendered && isOpen ? 'di-open' : '',
+          'bg-white dark:bg-[#0a0a0a]',
+          'border border-black/[0.08] dark:border-white/[0.09]',
+          'rounded-[28px]',
+          'shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_24px_64px_rgba(0,0,0,0.12),0_4px_16px_rgba(0,0,0,0.08)]',
+          'dark:shadow-[0_0_0_0.5px_rgba(255,255,255,0.06),0_24px_64px_rgba(0,0,0,0.7),0_4px_16px_rgba(0,0,0,0.4)]',
+        ].join(' ')}
       >
         <div className="di-content">
 
@@ -187,17 +166,11 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           <div className="flex items-center justify-between px-4 pt-4 pb-3.5">
             <div className="flex items-center gap-2">
               <span style={{ color: '#2FAF8F' }}><IcoSpark /></span>
-              <span
-                className="di-serif italic text-[15px] leading-none"
-                style={{ color: 'rgba(255,255,255,0.75)' }}
-              >
+              <span className="di-serif italic text-[15px] leading-none text-black/75 dark:text-white/75">
                 Notificaciones
               </span>
               {noLeidas > 0 && (
-                <span
-                  className="text-[10px] font-semibold leading-none"
-                  style={{ color: 'rgba(255,255,255,0.2)' }}
-                >
+                <span className="text-[10px] font-semibold leading-none text-black/25 dark:text-white/20">
                   · {noLeidas}
                 </span>
               )}
@@ -206,10 +179,7 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
             {noLeidas > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[10.5px] font-medium transition-colors"
-                style={{ color: 'rgba(255,255,255,0.2)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#2FAF8F')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.2)')}
+                className="text-[10.5px] font-medium transition-colors text-black/25 dark:text-white/20 hover:text-[#2FAF8F]"
               >
                 Marcar leídas
               </button>
@@ -217,16 +187,16 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           </div>
 
           {/* ── DIVIDER ── */}
-          <div className="di-sep" />
+          <div className="h-px mx-4 bg-black/[0.06] dark:bg-white/[0.06]" />
 
           {/* ── LIST ── */}
           <div className="di-scroll overflow-y-auto max-h-[400px] py-1.5">
             {visible.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <IcoBell c="w-5 h-5 text-white/25" />
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-black/[0.05] dark:bg-white/[0.06]">
+                  <IcoBell c="w-5 h-5 text-black/25 dark:text-white/25" />
                 </div>
-                <p className="text-[12px] text-white/30">Sin notificaciones</p>
+                <p className="text-[12px] text-black/30 dark:text-white/30">Sin notificaciones</p>
               </div>
             ) : (
               visible.map((n, i) => (
@@ -244,13 +214,10 @@ export default function NotificacionesPanel({ isOpen, onClose }: NotificacionesP
           </div>
 
           {/* ── FOOTER ── */}
-          <div className="di-sep" />
+          <div className="h-px mx-4 bg-black/[0.06] dark:bg-white/[0.06]" />
           <button
             onClick={() => { onClose(); navigate('/notificaciones') }}
-            className="group w-full flex items-center justify-center gap-2 h-12 transition-colors"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2FAF8F')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+            className="w-full flex items-center justify-center gap-2 h-12 transition-colors text-black/35 dark:text-white/35 hover:text-[#2FAF8F]"
           >
             <span className="text-[12.5px] font-medium">Ver historial completo</span>
             <IcoArrow />
@@ -274,8 +241,8 @@ function NotifRow({
   onDel: () => void
 }) {
   const [hovered, setHovered] = useState(false)
-  const cfg   = TYPE_CFG[n.type]
-  const Icon  = cfg.Icon
+  const cfg  = TYPE_CFG[n.type]
+  const Icon = cfg.Icon
 
   return (
     <div
@@ -286,7 +253,7 @@ function NotifRow({
     >
       {/* hover bg */}
       {hovered && (
-        <div className="absolute inset-0 rounded-none" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        <div className="absolute inset-0 bg-black/[0.03] dark:bg-white/[0.04]" />
       )}
 
       {/* left accent line */}
@@ -306,9 +273,7 @@ function NotifRow({
           transition: 'box-shadow 200ms ease',
         }}
       >
-        <span style={{ color: cfg.accent }}>
-          <Icon />
-        </span>
+        <span style={{ color: cfg.accent }}><Icon /></span>
       </div>
 
       {/* content */}
@@ -321,23 +286,21 @@ function NotifRow({
           >
             {cfg.label}
           </span>
-          <span className="w-[3px] h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
-          <span className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{formatTime(n.created_at)}</span>
+          <span className="w-[3px] h-[3px] rounded-full bg-black/15 dark:bg-white/15" />
+          <span className="text-[10.5px] text-black/30 dark:text-white/30">{formatTime(n.created_at)}</span>
         </div>
 
         {/* title */}
-        <p
-          className="text-[13px] font-medium leading-snug mb-1 pr-6 transition-colors"
-          style={{ color: n.read ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.92)' }}
-        >
+        <p className={`text-[13px] font-medium leading-snug mb-1 pr-6 transition-colors ${
+          n.read
+            ? 'text-black/40 dark:text-white/45'
+            : 'text-black/85 dark:text-white/92'
+        }`}>
           {n.title}
         </p>
 
         {/* message */}
-        <p
-          className="text-[11.5px] leading-[1.65] line-clamp-2"
-          style={{ color: 'rgba(255,255,255,0.3)' }}
-        >
+        <p className="text-[11.5px] leading-[1.65] line-clamp-2 text-black/40 dark:text-white/30">
           {n.body}
         </p>
 
@@ -365,10 +328,7 @@ function NotifRow({
       {hovered && (
         <button
           onClick={onDel}
-          className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center rounded-md transition-colors z-10"
-          style={{ color: 'rgba(255,255,255,0.2)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.2)')}
+          className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center rounded-md transition-colors z-10 text-black/20 dark:text-white/20 hover:text-red-500"
         >
           <IcoX />
         </button>
@@ -376,7 +336,7 @@ function NotifRow({
 
       {/* row separator */}
       {!isLast && (
-        <div className="absolute bottom-0 left-14 right-4 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+        <div className="absolute bottom-0 left-14 right-4 h-px bg-black/[0.05] dark:bg-white/[0.05]" />
       )}
     </div>
   )

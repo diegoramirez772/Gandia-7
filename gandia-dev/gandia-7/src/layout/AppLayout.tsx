@@ -31,18 +31,19 @@ const NAV_GROUPS = [
   {
     label: 'Principal',
     items: [
-      { label: 'Chat',       path: '/chat',      icon: 'chat'         },
-      { label: 'Pasaportes', path: '/home',       icon: 'file'         },
-      { label: 'Gemelos',    path: '/home',       icon: 'copy'         },
+      { label: 'Chat',       path: '/chat',                        icon: 'chat'         },
+      { label: 'Noticias',   path: '/noticias',                    icon: 'newspaper'    },
+      { label: 'Fichas',     path: '/chat?open=passport',          icon: 'file'         },
+      { label: 'Gemelos',    path: '/chat?open=twins',             icon: 'copy'         },
     ],
   },
   {
     label: 'Operaciones',
     items: [
-      { label: 'Monitoreo',     path: '/home',     icon: 'eye'          },
-      { label: 'Certificación', path: '/home',     icon: 'check-circle' },
-      { label: 'Trámites',      path: '/tramites', icon: 'tramites'     },
-      { label: 'Verificación',  path: '/home',     icon: 'verified'     },
+      { label: 'Monitoreo',     path: '/chat?open=monitoring',     icon: 'eye'          },
+      { label: 'Certificación', path: '/chat?open=certification',  icon: 'check-circle' },
+      { label: 'Trámites',      path: '/tramites',                 icon: 'tramites'     },
+      { label: 'Verificación',  path: '/chat?open=verification',   icon: 'verified'     },
     ],
   },
   {
@@ -87,16 +88,32 @@ function AppLayout() {
 
   const currentUser = { displayName, subtitle, email: profile?.email ?? '', avatarLetter, ranchLetter }
 
-  const isActive = (path: string) =>
-    path !== '/home' &&
-    (location.pathname === path || location.pathname.startsWith(path + '/'))
+  const isActive = (path: string) => {
+    if (path === '/chat' && !path.includes('?')) {
+      // Chat puro: activo solo si estamos en /chat sin query param open
+      return location.pathname === '/chat' && !location.search.includes('open=')
+    }
+    if (path.includes('?open=')) {
+      const param = path.split('?open=')[1]
+      return location.pathname === '/chat' && location.search.includes(`open=${param}`)
+    }
+    return (
+      path !== '/home' &&
+      (location.pathname === path || location.pathname.startsWith(path + '/'))
+    )
+  }
 
   const toggleSidebar = () => {
     if (window.innerWidth >= 1024) setSidebarCollapsed(p => !p)
   }
 
   const handleNav = (path: string) => {
-    navigate(path)
+    if (path.includes('?')) {
+      const [base, query] = path.split('?')
+      navigate({ pathname: base, search: `?${query}` })
+    } else {
+      navigate(path)
+    }
     setMobileMenuOpen(false)
   }
 
@@ -562,16 +579,13 @@ function NavItem({
         aria-label={label}
         className={[
           'relative w-full flex items-center gap-2.5 px-3 py-2 rounded-xl mb-0.5',
-          'text-[13px] font-medium transition-all duration-100 active:scale-[0.97]',
+          'text-[13px] font-medium transition-all duration-150 active:scale-[0.97]',
           collapsed ? 'lg:justify-center lg:px-2' : '',
           active
-            ? 'bg-[#2FAF8F]/[0.09] dark:bg-[#2FAF8F]/[0.11] text-stone-900 dark:text-stone-50'
+            ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-900 dark:text-stone-50'
             : 'text-stone-500 dark:text-stone-400 hover:bg-stone-100/80 dark:hover:bg-stone-800/50 hover:text-stone-800 dark:hover:text-stone-100',
         ].join(' ')}
       >
-        {active && (
-          <span className="absolute left-0.5 top-1/2 -translate-y-1/2 w-[2.5px] h-[18px] rounded-full bg-[#2FAF8F]" />
-        )}
         <span className={active ? 'text-[#2FAF8F]' : ''}>
           {getIcon(icon, active)}
         </span>
@@ -775,6 +789,7 @@ function getIcon(name: string, active = false) {
     tramites:      <svg {...s}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>,
     verified:      <svg {...s}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
     clock:         <svg {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    newspaper:     <svg {...s}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/></svg>,
   }
   return map[name] ?? null
 }

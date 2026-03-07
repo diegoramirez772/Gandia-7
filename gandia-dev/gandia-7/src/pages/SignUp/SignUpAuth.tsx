@@ -71,13 +71,13 @@ const CountdownDisplay = ({ days, hours, minutes, seconds }: { days: number; hou
       {units.map((unit, index) => (
         <div key={unit.label} className="flex items-center">
           <div className="relative group">
-            <div className="bg-stone-200/80 dark:bg-stone-950/50 border border-stone-300 dark:border-stone-800/50 rounded-lg p-3 sm:p-4 backdrop-blur-sm min-w-17.5 sm:min-w-21.25 flex flex-col items-center shadow-lg">
+            <div className="bg-stone-900 border border-stone-700/50 rounded-lg p-3 sm:p-4 backdrop-blur-sm min-w-17.5 sm:min-w-21.25 flex flex-col items-center shadow-lg">
               <div className="text-3xl sm:text-4xl font-bold text-[#2FAF8F] tracking-tight leading-none text-center mb-1 tabular-nums font-mono">{String(unit.value).padStart(2, '0')}</div>
-              <div className="text-[10px] sm:text-xs font-medium text-stone-600 dark:text-stone-500 uppercase tracking-wider text-center">{unit.label}</div>
+              <div className="text-[10px] sm:text-xs font-medium text-stone-500 uppercase tracking-wider text-center">{unit.label}</div>
             </div>
             <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#2FAF8F]/20 rounded-full animate-pulse" />
           </div>
-          {index < units.length - 1 && <div className="text-xl sm:text-2xl font-bold text-stone-500 dark:text-stone-700 mx-1 sm:mx-2 pb-2">:</div>}
+          {index < units.length - 1 && <div className="text-xl sm:text-2xl font-bold text-stone-600 mx-1 sm:mx-2 pb-2">:</div>}
         </div>
       ))}
     </div>
@@ -100,13 +100,13 @@ const ConfirmModal = ({ open, title, description, confirmLabel = 'Confirmar', ca
       <div className="relative w-full max-w-sm animate-[modalIn_0.25s_cubic-bezier(.16,1,.3,1)]">
         {/* Línea verde top */}
         <div className="h-[2px] bg-gradient-to-r from-transparent via-[#2FAF8F]/60 to-transparent rounded-t-3xl" />
-        <div className="bg-[#0f0f0e] border border-white/8 rounded-b-3xl rounded-t-none px-6 pt-6 pb-5">
+        <div className="bg-white dark:bg-[#0f0f0e] border border-stone-200 dark:border-white/8 rounded-b-3xl rounded-t-none px-6 pt-6 pb-5">
           <div className="mb-5">
-            <h3 className="text-[15px] font-semibold text-stone-50 tracking-tight">{title}</h3>
-            <p className="text-[13px] text-stone-500 mt-1.5 leading-relaxed">{description}</p>
+            <h3 className="text-[15px] font-semibold text-stone-900 dark:text-stone-50 tracking-tight">{title}</h3>
+            <p className="text-[13px] text-stone-500 dark:text-stone-400 mt-1.5 leading-relaxed">{description}</p>
           </div>
           <div className="flex gap-2.5">
-            <button onClick={onCancel} className="flex-1 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-[13px] font-medium text-stone-400 hover:text-stone-200 transition-all">{cancelLabel}</button>
+            <button onClick={onCancel} className="flex-1 h-10 rounded-xl bg-stone-100 dark:bg-white/5 hover:bg-stone-200 dark:hover:bg-white/10 text-[13px] font-medium text-stone-600 dark:text-stone-300 hover:text-stone-800 dark:hover:text-stone-100 transition-all">{cancelLabel}</button>
             <button onClick={onConfirm} className="flex-1 h-10 rounded-xl bg-[#2FAF8F] hover:bg-[#27a07f] text-[13px] font-semibold text-white shadow-sm active:scale-[0.98] transition-all">{confirmLabel}</button>
           </div>
         </div>
@@ -760,8 +760,8 @@ const SignUpAuth = () => {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#0c0a09] text-stone-900 dark:text-stone-50 flex items-center justify-center overflow-hidden font-sans selection:bg-[#2FAF8F]/30">
       <ConfirmModal open={modal.open} title={modal.title} description={modal.description} confirmLabel={modal.confirmLabel} cancelLabel="Cancelar" onConfirm={modal.onConfirm} onCancel={closeModal} />
-      <button onClick={handleBack} className="fixed top-6 left-6 z-50 w-10 h-10 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-800 rounded-lg flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800 transition-all">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-stone-600 dark:text-stone-400"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      <button onClick={handleBack} className="fixed top-6 left-6 z-50 w-10 h-10 bg-white/90 lg:bg-transparent border border-stone-200 lg:border-white/20 rounded-lg flex items-center justify-center hover:bg-stone-100 lg:hover:bg-white/10 hover:border-stone-300 lg:hover:border-white/40 transition-all hover:-translate-x-0.5 group">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-stone-600 lg:text-white/60 group-hover:text-stone-900 lg:group-hover:text-white transition-colors"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
       <div className="flex w-full max-w-350 h-screen">
         <div className="hidden lg:flex lg:w-[45%] lg:min-w-125 bg-stone-950 dark:bg-[#080706] border-r border-stone-800 p-12 flex-col justify-center relative overflow-hidden opacity-0 animate-[fadeInLeft_0.8s_ease-out_0.2s_forwards]">

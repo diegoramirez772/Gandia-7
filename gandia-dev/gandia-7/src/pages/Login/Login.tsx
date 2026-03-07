@@ -79,13 +79,13 @@ const ConfirmModal = ({ open, title, description, confirmLabel = 'Confirmar', ca
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" onClick={onCancel} />
       <div className="relative w-full max-w-sm animate-[modalIn_0.25s_cubic-bezier(.16,1,.3,1)]">
         <div className="h-[2px] bg-gradient-to-r from-transparent via-[#2FAF8F]/60 to-transparent rounded-t-3xl" />
-        <div className="bg-[#0f0f0e] border border-white/8 rounded-b-3xl rounded-t-none px-6 pt-6 pb-5">
+        <div className="bg-white border border-stone-200 rounded-b-3xl rounded-t-none px-6 pt-6 pb-5">
           <div className="mb-5">
-            <h3 className="text-[15px] font-semibold text-stone-50 tracking-tight">{title}</h3>
+            <h3 className="text-[15px] font-semibold text-stone-900 tracking-tight">{title}</h3>
             <p className="text-[13px] text-stone-500 mt-1.5 leading-relaxed">{description}</p>
           </div>
           <div className="flex gap-2.5">
-            <button onClick={onCancel} className="flex-1 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-[13px] font-medium text-stone-400 hover:text-stone-200 transition-all">{cancelLabel}</button>
+            <button onClick={onCancel} className="flex-1 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-[13px] font-medium text-stone-600 hover:text-stone-800 transition-all">{cancelLabel}</button>
             <button onClick={onConfirm} className="flex-1 h-10 rounded-xl bg-[#2FAF8F] hover:bg-[#27a07f] text-[13px] font-semibold text-white shadow-sm active:scale-[0.98] transition-all">{confirmLabel}</button>
           </div>
         </div>
@@ -410,8 +410,8 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#0c0a09] text-stone-900 dark:text-stone-50 flex items-center justify-center overflow-hidden font-sans selection:bg-[#2FAF8F]/30">
       {/* Back button */}
-      <button onClick={handleBack} className="fixed top-6 left-6 z-50 w-10 h-10 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-800 rounded-lg flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-800 transition-all hover:-translate-x-0.5 group">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-stone-600 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-50 transition-colors"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+      <button onClick={handleBack} className="fixed top-6 left-6 z-50 w-10 h-10 bg-white/90 lg:bg-transparent border border-stone-200 lg:border-white/20 rounded-lg flex items-center justify-center hover:bg-stone-100 lg:hover:bg-white/10 hover:border-stone-300 lg:hover:border-white/40 transition-all hover:-translate-x-0.5 group">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5 text-stone-600 lg:text-white/60 group-hover:text-stone-900 lg:group-hover:text-white transition-colors"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
 
       <div className="flex w-full max-w-350 h-screen">

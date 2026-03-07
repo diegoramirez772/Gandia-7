@@ -16,16 +16,14 @@ const now = () =>
 
 // ─── MOCK CONVERSATION ───────────────────────────────────────────────────────
 const MOCK_TURNS: Turn[] = [
-  {
-    role: 'user',
-    text: 'Necesito registrar un nuevo pasaporte para un becerro que acaba de nacer esta mañana.',
-    ts: '09:14',
-  },
-  {
-    role: 'gandia',
-    text: 'Perfecto. Para iniciar el registro del pasaporte necesito el número de arete oficial o el ID del animal. ¿Lo tienes a la mano?',
-    ts: '09:14',
-  },
+  { role: 'user',   text: 'Necesito registrar un nuevo pasaporte para un becerro que nació esta mañana.',                                                                    ts: '09:14' },
+  { role: 'gandia', text: 'Perfecto. Necesito el número de arete oficial o el ID del animal para iniciar el registro. ¿Lo tienes a la mano?',                               ts: '09:14' },
+  { role: 'user',   text: 'Sí, el arete es MX-724-001-9923.',                                                                                                               ts: '09:15' },
+  { role: 'gandia', text: 'Registrado. Ahora necesito la fecha de nacimiento exacta y el nombre de la madre si la tienes identificada.',                                     ts: '09:15' },
+  { role: 'user',   text: 'Nació hoy 4 de marzo. La madre es la vaca con arete MX-724-001-0047, la Lola.',                                                                  ts: '09:15' },
+  { role: 'gandia', text: 'Perfecto. Becerro MX-724-001-9923, nacido hoy, hijo de Lola MX-724-001-0047. ¿Deseas asignarle un nombre o lo dejamos sin nombre por ahora?',   ts: '09:16' },
+  { role: 'user',   text: 'Ponle Torito por mientras.',                                                                                                                      ts: '09:16' },
+  { role: 'gandia', text: 'Listo. El pasaporte de Torito quedó registrado. Te recuerdo que tiene 45 días para presentarlo ante el SENASICA para validación oficial.',       ts: '09:16' },
 ]
 
 // ─── WAVEFORM ─────────────────────────────────────────────────────────────────
@@ -56,137 +54,40 @@ function Waveform({ active }: { active: boolean }) {
 }
 
 // ─── ORB ──────────────────────────────────────────────────────────────────────
-function Orb({
-  state,
-  onClick,
-}: {
-  state: OrbState
-  onClick: () => void
-}) {
+// ─── TYPING DOTS ─────────────────────────────────────────────────────────────
+function TypingDots() {
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
-
-      {/* Outer ambient ring — always visible, slow rotate */}
-      <div
-        className="absolute inset-0 rounded-full orb-ring-ambient"
-        style={{
-          border: '1px solid',
-          borderColor:
-            state === 'listening' ? 'rgba(47,175,143,0.25)'
-            : state === 'speaking' ? 'rgba(47,175,143,0.20)'
-            : 'rgba(168,162,158,0.18)',
-        }}
-      />
-
-      {/* Pulse rings — listening */}
-      {state === 'listening' && (
-        <>
-          <div className="absolute rounded-full orb-pulse-1" style={{ width: 176, height: 176, border: '1px solid rgba(47,175,143,0.22)' }} />
-          <div className="absolute rounded-full orb-pulse-2" style={{ width: 176, height: 176, border: '1px solid rgba(47,175,143,0.15)' }} />
-        </>
-      )}
-
-      {/* Speaking rings */}
-      {state === 'speaking' && (
-        <>
-          <div className="absolute rounded-full orb-speak-1" style={{ width: 176, height: 176, border: '1px solid rgba(47,175,143,0.20)' }} />
-        </>
-      )}
-
-      {/* Processing arc — SVG */}
-      {state === 'processing' && (
-        <svg
-          className="absolute orb-spin-arc"
-          width={176}
-          height={176}
-          viewBox="0 0 176 176"
-          fill="none"
-        >
-          <circle cx="88" cy="88" r="86" stroke="rgba(47,175,143,0.12)" strokeWidth="1" />
-          <circle
-            cx="88" cy="88" r="86"
-            stroke="#2FAF8F"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeDasharray="80 460"
-            strokeDashoffset="0"
-          />
-        </svg>
-      )}
-
-      {/* Core button */}
-      <button
-        onClick={onClick}
-        aria-label={state === 'idle' ? 'Iniciar escucha' : 'Detener'}
-        className="orb-core relative z-10 rounded-full flex items-center justify-center transition-all duration-500 active:scale-95"
-        style={{
-          width: 140,
-          height: 140,
-          background:
-            state === 'listening'
-              ? 'radial-gradient(circle at 38% 38%, rgba(47,175,143,0.18) 0%, rgba(47,175,143,0.06) 60%, transparent 100%), rgba(255,255,255,0.55)'
-              : state === 'speaking'
-              ? 'radial-gradient(circle at 38% 38%, rgba(47,175,143,0.22) 0%, rgba(47,175,143,0.08) 55%, transparent 100%), rgba(255,255,255,0.55)'
-              : state === 'processing'
-              ? 'radial-gradient(circle at 38% 38%, rgba(200,195,190,0.35) 0%, transparent 70%), rgba(255,255,255,0.50)'
-              : 'radial-gradient(circle at 38% 38%, rgba(220,215,210,0.6) 0%, transparent 70%), rgba(255,255,255,0.45)',
-          boxShadow:
-            state === 'listening'
-              ? '0 0 0 1px rgba(47,175,143,0.20), 0 12px 48px rgba(47,175,143,0.18), inset 0 1px 0 rgba(255,255,255,0.8)'
-              : state === 'speaking'
-              ? '0 0 0 1px rgba(47,175,143,0.25), 0 16px 56px rgba(47,175,143,0.22), inset 0 1px 0 rgba(255,255,255,0.8)'
-              : '0 0 0 1px rgba(168,162,158,0.20), 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
-      >
-        {/* Dark mode core */}
-        <span className="hidden dark:block absolute inset-0 rounded-full" style={{
-          background:
-            state === 'listening'
-              ? 'radial-gradient(circle at 38% 38%, rgba(47,175,143,0.22) 0%, rgba(47,175,143,0.07) 55%, transparent 100%), rgba(28,25,23,0.70)'
-              : state === 'speaking'
-              ? 'radial-gradient(circle at 38% 38%, rgba(47,175,143,0.28) 0%, rgba(47,175,143,0.09) 50%, transparent 100%), rgba(28,25,23,0.70)'
-              : 'radial-gradient(circle at 38% 38%, rgba(60,55,50,0.9) 0%, transparent 70%), rgba(28,25,23,0.70)',
-          boxShadow:
-            state === 'listening'
-              ? '0 0 0 1px rgba(47,175,143,0.22), 0 12px 48px rgba(47,175,143,0.20), inset 0 1px 0 rgba(255,255,255,0.06)'
-              : state === 'speaking'
-              ? '0 0 0 1px rgba(47,175,143,0.28), 0 16px 56px rgba(47,175,143,0.25), inset 0 1px 0 rgba(255,255,255,0.06)'
-              : '0 0 0 1px rgba(80,70,60,0.30), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
-        }} />
-
-        {/* Icon */}
-        <MicIcon state={state} />
-      </button>
+    <div className="flex items-center gap-1.5 py-1">
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-stone-300 dark:bg-stone-600"
+          style={{ animation: `typing-dot 1.2s ease-in-out ${i * 200}ms infinite` }}
+        />
+      ))}
     </div>
   )
 }
 
-function MicIcon({ state }: { state: OrbState }) {
-  const color =
-    state === 'listening' ? '#2FAF8F'
-    : state === 'speaking' ? '#2FAF8F'
-    : state === 'processing' ? '#a8a29e'
-    : '#78716c'
-
-  if (state === 'processing') {
-    return (
-      <svg className="relative z-10 orb-icon-spin" width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5"/>
-        <path d="M2 12l10 5 10-5"/>
-      </svg>
-    )
-  }
-
+// ─── TURN ENTRY ───────────────────────────────────────────────────────────────
+function TurnEntry({ turn }: { turn: Turn }) {
   return (
-    <svg className="relative z-10" width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-      <line x1="12" y1="19" x2="12" y2="23"/>
-      <line x1="8" y1="23" x2="16" y2="23"/>
-    </svg>
+    <div className={`turn-in flex gap-3 ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+
+      <div className="max-w-[78%]">
+        <p className={`text-[11px] font-semibold tracking-wide mb-1 ${turn.role === 'gandia' ? 'text-[#2FAF8F]' : 'text-stone-400 dark:text-stone-500 text-right'}`}>
+          {turn.role === 'gandia' ? 'GANDIA' : 'TÚ'}
+        </p>
+        <div className={`rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-[1.65] ${
+          turn.role === 'user'
+            ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-700 dark:text-stone-300'
+            : 'text-stone-600 dark:text-stone-300'
+        }`}>
+          {turn.text}
+        </div>
+        <p className={`text-[10px] text-stone-300 dark:text-stone-600 mt-1 px-1 ${turn.role === 'user' ? 'text-right' : ''}`}>{turn.ts}</p>
+      </div>
+    </div>
   )
 }
 
@@ -260,21 +161,14 @@ function SummarySheet({
             <div className="px-6 pb-4 space-y-4 max-h-[280px] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               {turns.map((t, i) => (
                 <div key={i} className={`flex gap-3 ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {t.role === 'gandia' && (
-                    <div className="w-6 h-6 rounded-lg bg-[#2FAF8F] flex items-center justify-center text-white text-[10px] font-bold shrink-0 mt-0.5 shadow-sm">
-                      G
-                    </div>
-                  )}
+
                   <div className="max-w-[80%]">
                     <div className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-[1.65] ${
                       t.role === 'user'
                         ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-700 dark:text-stone-300'
                         : 'bg-transparent text-stone-600 dark:text-stone-300'
                     }`}>
-                      {t.role === 'gandia'
-                        ? <span className="sheet-serif italic">{t.text}</span>
-                        : t.text
-                      }
+                      {t.text}
                     </div>
                     <p className="text-[10px] text-stone-300 dark:text-stone-600 mt-1 px-1">{t.ts}</p>
                   </div>
@@ -317,49 +211,68 @@ export default function Voz() {
   const navigate = useNavigate()
 
   const [orbState, setOrbState] = useState<OrbState>('idle')
-  const [isPaused, setIsPaused]   = useState(false)
+  const isPaused = false
   const [sheetOpen, setSheetOpen] = useState(false)
   const [turns, setTurns]         = useState<Turn[]>([])
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showTyping, setShowTyping] = useState(false)
+  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasRun    = useRef(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  // ── Demo flow ──
-  const runDemo = useCallback(() => {
-    setOrbState('listening')
-    timerRef.current = setTimeout(() => {
-      const userTurn: Turn = { role: 'user', text: MOCK_TURNS[0].text, ts: now() }
-      setTurns([userTurn])
-      setOrbState('processing')
-      timerRef.current = setTimeout(() => {
-        setOrbState('speaking')
-        const gandiaTurn: Turn = { role: 'gandia', text: MOCK_TURNS[1].text, ts: now() }
-        setTurns(p => [...p, gandiaTurn])
-        timerRef.current = setTimeout(() => {
-          setOrbState('idle')
-        }, 3200)
-      }, 1800)
-    }, 2200)
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 80)
   }, [])
 
+  // ── Demo flow ──
+  const runDemoRef = useRef<() => void>(null!)
+
   useEffect(() => {
-    const t = setTimeout(runDemo, 600)
+    runDemoRef.current = () => {
+      if (hasRun.current) return
+      hasRun.current = true
+      let totalDelay = 0
+      const schedule = (fn: () => void, ms: number) => {
+        totalDelay += ms
+        timerRef.current = setTimeout(fn, totalDelay)
+      }
+      MOCK_TURNS.forEach((turn, i) => {
+        if (turn.role === 'user') {
+          schedule(() => { setOrbState('listening') }, i === 0 ? 400 : 600)
+          schedule(() => {
+            setTurns(p => [...p, { ...turn, ts: now() }])
+            setOrbState('processing')
+            scrollToEnd()
+          }, 2000)
+        } else {
+          schedule(() => { setShowTyping(true); setOrbState('speaking'); scrollToEnd() }, 1400)
+          schedule(() => {
+            setShowTyping(false)
+            setTurns(p => [...p, { ...turn, ts: now() }])
+            scrollToEnd()
+          }, 1600)
+          if (i === MOCK_TURNS.length - 1) {
+            schedule(() => { setOrbState('idle') }, 1800)
+          }
+        }
+      })
+    }
+  })
+
+  useEffect(() => {
+    const t = setTimeout(() => runDemoRef.current(), 600)
     return () => { clearTimeout(t); if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [runDemo])
+  }, [])
 
   const handleOrbClick = () => {
     if (isPaused) return
     if (timerRef.current) clearTimeout(timerRef.current)
     if (orbState === 'idle') {
-      runDemo()
+      runDemoRef.current()
     } else {
       setOrbState('idle')
     }
   }
 
-  const handlePause = () => {
-    setIsPaused(p => !p)
-    if (!isPaused && timerRef.current) clearTimeout(timerRef.current)
-    if (!isPaused) setOrbState('idle')
-  }
 
   const meta = isPaused
     ? { label: 'En pausa', sub: 'Toca ▶ para continuar' }
@@ -436,8 +349,14 @@ export default function Voz() {
         }
         .label-in { animation: label-in 240ms ease both; }
 
+        /* Typing dots */
+        @keyframes typing-dot {
+          0%,60%,100% { opacity: 0.25; transform: translateY(0); }
+          30%          { opacity: 1;    transform: translateY(-3px); }
+        }
+
         /* Thin scrollbar */
-        .vz-scroll::-webkit-scrollbar { width: 2px; }
+        .vz-scroll::-webkit-scrollbar { width: 4px; }
         .vz-scroll::-webkit-scrollbar-track { background: transparent; }
         .vz-scroll::-webkit-scrollbar-thumb { background: #e7e5e4; border-radius: 999px; }
         .dark .vz-scroll::-webkit-scrollbar-thumb { background: #3c3836; }
@@ -445,93 +364,72 @@ export default function Voz() {
 
       <div className="vz flex flex-col h-full bg-[#fafaf9] dark:bg-[#0c0a09] select-none overflow-hidden">
 
-        {/* ── BACK BTN — within page content, not in AppLayout header ── */}
-        <div className="shrink-0 px-4 pt-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[12px] font-medium text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800/60 transition-all"
-            aria-label="Volver"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Volver
-          </button>
-        </div>
-
-        {/* ── MAIN AREA ─────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-
-          {/* ── ORB AREA — always centered ── */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-5 px-4 py-4 min-h-0">
-
-            {/* State label */}
-            <div key={`${orbState}-${isPaused}`} className="label-in text-center">
-              <p className="text-[13px] font-medium tracking-[-0.01em] text-stone-700 dark:text-stone-200">
-                {meta.label}
-              </p>
-              <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5">
-                {meta.sub}
-              </p>
-            </div>
-
-            {/* Orb */}
-            <Orb state={isPaused ? 'idle' : orbState} onClick={handleOrbClick} />
-
-            {/* Waveform */}
-            <div className="h-8">
-              <Waveform active={!isPaused && orbState === 'listening'} />
-            </div>
-
-          </div>
-        </div>
-
-        {/* ── CONTROLS BAR ──────────────────────────────────── */}
-        <div className="shrink-0 px-4 pb-6">
-          <div className="max-w-[360px] mx-auto">
-            <div className="flex items-center justify-center gap-3">
-
-              {/* Pause / Resume */}
-              <ControlBtn
-                onClick={handlePause}
-                label={isPaused ? 'Reanudar' : 'Pausar'}
-                active={isPaused}
-              >
-                {isPaused ? (
-                  <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                ) : (
-                  <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
-                  </svg>
-                )}
-              </ControlBtn>
-
-              {/* Big center mic toggle — send to chat if idle+turns, else orb action */}
-              <button
-                onClick={handleOrbClick}
-                disabled={isPaused}
-                aria-label="Activar micrófono"
-                className={`
-                  w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95 shadow-sm
-                  ${isPaused
-                    ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-300 dark:text-stone-600 cursor-not-allowed'
-                    : orbState !== 'idle'
-                    ? 'bg-[#2FAF8F] hover:bg-[#27a07f] text-white shadow-[0_4px_20px_rgba(47,175,143,0.35)]'
-                    : 'bg-stone-900 dark:bg-stone-50 text-white dark:text-stone-900 hover:bg-stone-700 dark:hover:bg-stone-200'
-                  }
-                `}
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
+        {/* ── TRANSCRIPT AREA ─────────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {turns.length === 0 && orbState === 'idle' && !isPaused ? (
+            /* Empty state */
+            <div className="h-full flex flex-col items-center justify-center gap-3 px-8">
+              <div className="w-11 h-11 rounded-[14px] bg-stone-100 dark:bg-stone-800/60 flex items-center justify-center mb-1">
+                <svg className="w-5 h-5 text-stone-300 dark:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                 </svg>
-              </button>
+              </div>
+              <p className="text-[14px] font-semibold text-stone-500 dark:text-stone-400">Gandia está lista</p>
+              <p className="text-[12.5px] text-stone-400 dark:text-stone-500 text-center leading-relaxed">
+                Toca el micrófono para iniciar<br />una conversación por voz
+              </p>
+            </div>
+          ) : (
+            /* Transcript */
+            <div
+              ref={scrollRef}
+              className="h-full overflow-y-auto vz-scroll px-5 py-5 space-y-5"
+            >
+              {/* Session divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-stone-200/70 dark:bg-stone-800/60" />
+                <span className="text-[10px] text-stone-300 dark:text-stone-600 tracking-wide">{now()} · Sesión iniciada</span>
+                <div className="flex-1 h-px bg-stone-200/70 dark:bg-stone-800/60" />
+              </div>
 
-              {/* Summary */}
+              {turns.map((t, i) => (
+                <TurnEntry key={i} turn={t} />
+              ))}
+
+              {/* Typing indicator */}
+              {showTyping && (
+                <div>
+                  <p className="text-[11px] font-semibold tracking-wide text-[#2FAF8F] mb-1">GANDIA</p>
+                  <TypingDots />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── CONTROLS ────────────────────────────────────────── */}
+        <div className="shrink-0 border border-b-0 border-stone-200/60 dark:border-stone-800/60 rounded-t-3xl px-6 pt-5 pb-6 bg-white dark:bg-[#0c0a09] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.30)]">
+          <div className="max-w-[400px] mx-auto">
+
+            {/* Status + waveform */}
+            <div className="flex flex-col items-center gap-2 mb-5">
+              <div key={`${orbState}-${isPaused}`} className="label-in text-center">
+                <p className="text-[13px] font-medium tracking-[-0.01em] text-stone-700 dark:text-stone-200">
+                  {meta.label}
+                </p>
+                <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5">
+                  {meta.sub}
+                </p>
+              </div>
+              <div className="h-7">
+                <Waveform active={!isPaused && orbState === 'listening'} />
+              </div>
+            </div>
+
+            {/* 3 buttons: Resumen | Mic | Salir */}
+            <div className="flex items-center justify-center gap-8">
+
+              {/* Resumen */}
               <ControlBtn
                 onClick={() => setSheetOpen(true)}
                 label="Resumen"
@@ -545,10 +443,40 @@ export default function Voz() {
                 </svg>
               </ControlBtn>
 
+              {/* Central mic button */}
+              <button
+                onClick={handleOrbClick}
+                disabled={isPaused}
+                aria-label="Activar micrófono"
+                className={`
+                  w-[66px] h-[66px] rounded-[22px] flex items-center justify-center
+                  transition-all duration-200 active:scale-95
+                  ${isPaused
+                    ? 'bg-stone-100 dark:bg-stone-800/60 text-stone-300 dark:text-stone-600 cursor-not-allowed'
+                    : orbState !== 'idle'
+                    ? 'bg-[#2FAF8F] hover:bg-[#27a07f] text-white shadow-[0_4px_20px_rgba(47,175,143,0.35)]'
+                    : 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:bg-stone-700 dark:hover:bg-stone-300'
+                  }
+                `}
+              >
+                <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+
+              {/* Salir */}
+              <ControlBtn onClick={() => navigate(-1)} label="Salir">
+                <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </ControlBtn>
+
             </div>
 
-            {/* Footer hint */}
-            <p className="text-center text-[10.5px] text-stone-300 dark:text-stone-700 mt-4">
+            <p className="text-center text-[10px] text-stone-300 dark:text-stone-700 mt-4 tracking-wide">
               GANDIA 7 · Voz · Asistente ganadero
             </p>
           </div>

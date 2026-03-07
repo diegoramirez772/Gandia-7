@@ -715,354 +715,411 @@ const PLACEHOLDER_GRADIENTS = [
 ]
 
 function ShowcaseCarousel() {
-  const [active, setActive]     = useState(0)
-  const [prev, setPrev]         = useState<number | null>(null)
-  const [direction, setDirection] = useState<'next' | 'prev'>('next')
+  const [active,    setActive]    = useState(0)
+  const [prev,      setPrev]      = useState<number | null>(null)
   const [animating, setAnimating] = useState(false)
-  const [paused, setPaused]     = useState(false)
-  const [infoKey, setInfoKey]   = useState(0)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [paused,    setPaused]    = useState(false)
+  const [infoKey,   setInfoKey]   = useState(0)
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { isDark } = useTheme()
 
-  const goTo = useCallback((idx: number, dir: 'next' | 'prev') => {
-    if (animating) return
-    setDirection(dir)
+  const bg        = isDark ? '#060504' : '#F5F4F3'
+  const border    = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)'
+  const labelColor = isDark ? '#2FAF8F' : '#2FAF8F'
+  const titleColor = isDark ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.88)'
+  const descColor  = isDark ? 'rgba(255,255,255,0.32)' : 'rgba(0,0,0,0.42)'
+  const metaColor  = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)'
+  const divColor   = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'
+  const arrowBg    = isDark ? 'rgba(6,5,4,0.85)' : 'rgba(245,244,243,0.92)'
+  const arrowBorder= isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+  const arrowStroke= isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)'
+
+  const goTo = useCallback((idx: number) => {
+    if (animating || idx === active) return
     setPrev(active)
     setAnimating(true)
     setActive(idx)
     setInfoKey(k => k + 1)
-    setTimeout(() => { setPrev(null); setAnimating(false) }, 750)
+    setTimeout(() => { setPrev(null); setAnimating(false) }, 700)
   }, [active, animating])
 
-  const goNext = useCallback(() => {
-    goTo((active + 1) % SHOWCASE_MODULES.length, 'next')
-  }, [active, goTo])
-
-  const goPrev = useCallback(() => {
-    goTo((active - 1 + SHOWCASE_MODULES.length) % SHOWCASE_MODULES.length, 'prev')
-  }, [active, goTo])
+  const goNext = useCallback(() => goTo((active + 1) % SHOWCASE_MODULES.length), [active, goTo])
+  const goPrev = useCallback(() => goTo((active - 1 + SHOWCASE_MODULES.length) % SHOWCASE_MODULES.length), [active, goTo])
 
   useEffect(() => {
     if (paused) { if (timerRef.current) clearInterval(timerRef.current); return }
-    timerRef.current = setInterval(goNext, 5200)
+    timerRef.current = setInterval(goNext, 5800)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [paused, goNext])
 
-  const prevIdx = (active - 1 + SHOWCASE_MODULES.length) % SHOWCASE_MODULES.length
-  const nextIdx = (active + 1) % SHOWCASE_MODULES.length
   const mod = SHOWCASE_MODULES[active]
 
   return (
     <section
-      style={{ background: '#060504', borderTop: '1px solid rgba(255,255,255,0.04)', position: 'relative', overflow: 'hidden' }}
+      style={{ background: bg, borderTop: `1px solid ${border}`, position: 'relative', overflow: 'hidden' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       <style>{`
-        /* ── Scan line ── */
-        @keyframes cine-scan { 0%{top:-2px} 100%{top:100%} }
-        .cine-scanline-bar {
-          position:absolute; left:0; right:0; height:2px; z-index:6; pointer-events:none;
-          background:linear-gradient(90deg,transparent,rgba(47,175,143,0.04),transparent);
-          animation:cine-scan 11s linear infinite;
+        /* ── Editorial info transition ── */
+        @keyframes ed-info-in {
+          from { opacity:0; transform:translateY(18px) }
+          to   { opacity:1; transform:translateY(0) }
+        }
+        .ed-info-enter { animation: ed-info-in 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+
+        @keyframes ed-num-in {
+          from { opacity:0; transform:translateY(28px) }
+          to   { opacity:1; transform:translateY(0) }
+        }
+        .ed-num-enter { animation: ed-num-in 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+
+        /* ── Screen reveal — clip-path curtain ── */
+        @keyframes ed-reveal {
+          from { clip-path: inset(0 100% 0 0); }
+          to   { clip-path: inset(0 0% 0 0); }
+        }
+        .ed-screen-reveal {
+          animation: ed-reveal 0.68s cubic-bezier(0.77,0,0.18,1) both;
         }
 
-        /* ── Slide transitions ── */
-        @keyframes slide-in-right  { from{transform:translateX(120%) scale(0.88);opacity:0} to{transform:translateX(0) scale(1);opacity:1} }
-        @keyframes slide-in-left   { from{transform:translateX(-120%) scale(0.88);opacity:0} to{transform:translateX(0) scale(1);opacity:1} }
-        @keyframes slide-out-left  { from{transform:translateX(0) scale(1);opacity:1}  to{transform:translateX(-120%) scale(0.88);opacity:0} }
-        @keyframes slide-out-right { from{transform:translateX(0) scale(1);opacity:1}  to{transform:translateX(120%) scale(0.88);opacity:0} }
-
-        .cine-enter-next { animation:slide-in-right  0.72s cubic-bezier(0.16,1,0.3,1) both; }
-        .cine-enter-prev { animation:slide-in-left   0.72s cubic-bezier(0.16,1,0.3,1) both; }
-        .cine-exit-next  { animation:slide-out-left  0.72s cubic-bezier(0.16,1,0.3,1) both; }
-        .cine-exit-prev  { animation:slide-out-right 0.72s cubic-bezier(0.16,1,0.3,1) both; }
-
-        /* ── Info fade ── */
-        @keyframes info-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        .cine-info-enter { animation:info-in 0.6s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
-
-        /* ── Screen glow pulse ── */
-        @keyframes screen-glow {
-          0%,100%{box-shadow:0 30px 100px rgba(0,0,0,0.9),0 0 80px rgba(47,175,143,0.06),0 0 0 1px rgba(47,175,143,0.1)}
-          50%    {box-shadow:0 30px 100px rgba(0,0,0,0.9),0 0 120px rgba(47,175,143,0.12),0 0 0 1px rgba(47,175,143,0.18)}
+        /* ── Screen exit ── */
+        @keyframes ed-exit {
+          from { clip-path: inset(0 0% 0 0); opacity:1; }
+          to   { clip-path: inset(0 0% 0 100%); opacity:0; }
         }
-        .cine-screen-glow { animation:screen-glow 4s ease-in-out infinite; }
+        .ed-screen-exit {
+          position:absolute; inset:0;
+          animation: ed-exit 0.5s cubic-bezier(0.77,0,0.18,1) both;
+        }
 
-        /* ── Dot ── */
-        .cine-dot { transition:all 0.35s cubic-bezier(0.16,1,0.3,1); cursor:pointer; }
-        .cine-dot:hover { background:rgba(255,255,255,0.4) !important; }
-
-        /* ── Nav arrows ── */
-        .cine-arrow {
-          position:absolute; top:50%; z-index:20;
-          width:48px; height:48px; border-radius:50%;
-          display:flex; align-items:center; justify-content:center;
-          border:1px solid rgba(255,255,255,0.08);
-          background:rgba(6,5,4,0.7);
-          backdrop-filter:blur(12px);
-          cursor:pointer;
-          transition:all 0.25s ease;
-          transform:translateY(-50%);
+        /* ── Contact sheet thumbnails ── */
+        .ed-thumb {
+          position: relative;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: opacity 0.3s ease, transform 0.3s ease;
         }
-        .cine-arrow:hover {
-          border-color:rgba(47,175,143,0.35);
-          background:rgba(6,5,4,0.92);
-          box-shadow:0 0 24px rgba(47,175,143,0.12);
-        }
-        .cine-arrow-left  { left:max(16px, calc(50% - 480px)); }
-        .cine-arrow-right { right:max(16px, calc(50% - 480px)); }
-
-        /* ── Side screens ── */
-        .cine-side-screen {
-          position:absolute;
-          top:0; bottom:0;
-          width:clamp(160px, 22vw, 300px);
-          display:flex; align-items:center;
-          pointer-events:none; z-index:3;
-          overflow:hidden;
-        }
-        .cine-side-left  { left:0; }
-        .cine-side-right { right:0; }
-
-        .cine-side-inner {
-          width:100%; aspect-ratio:16/10;
-          border-radius:2px;
-          overflow:hidden;
-          border:1px solid rgba(255,255,255,0.05);
-          background:#0a0908;
-          opacity:0.32;
-          transform:scale(0.88);
-          transform-origin:center;
-          transition:opacity 0.5s ease, transform 0.5s ease;
-          filter:saturate(0.4) brightness(0.6);
-        }
-        .cine-side-left .cine-side-inner  { transform-origin:left center; }
-        .cine-side-right .cine-side-inner { transform-origin:right center; }
-
-        /* Side gradient masks — Pixel Point technique */
-        .cine-mask-left {
-          position:absolute; left:0; top:0; bottom:0; z-index:15; pointer-events:none;
-          width:clamp(200px,28vw,380px);
-          background:linear-gradient(to right,#060504 0%,#060504 35%,rgba(6,5,4,0.85) 60%,rgba(6,5,4,0.4) 78%,transparent 100%);
-        }
-        .cine-mask-right {
-          position:absolute; right:0; top:0; bottom:0; z-index:15; pointer-events:none;
-          width:clamp(200px,28vw,380px);
-          background:linear-gradient(to left,#060504 0%,#060504 35%,rgba(6,5,4,0.85) 60%,rgba(6,5,4,0.4) 78%,transparent 100%);
-        }
+        .ed-thumb:hover { opacity: 0.75 !important; transform: translateY(-2px); }
 
         /* ── Progress bar ── */
-        @keyframes progress-fill { from{width:0%} to{width:100%} }
-        .cine-progress-bar {
-          height:2px;
-          background:rgba(47,175,143,0.7);
-          border-radius:1px;
-          animation:progress-fill 5.2s linear both;
+        @keyframes ed-progress { from{width:0%} to{width:100%} }
+        .ed-progress-bar {
+          height: 1px;
+          background: #2FAF8F;
+          animation: ed-progress 5.8s linear both;
         }
+
+        /* ── Mobile ── */
+        @media (max-width: 768px) {
+          .ed-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-areas: "top" "image" "bottom" !important;
+          }
+          .ed-top       { grid-area: top !important; border-right: none !important; border-bottom: none !important; }
+          .ed-col-right { grid-area: image !important; min-height: 260px !important; }
+          .ed-bottom    { grid-area: bottom !important; border-right: none !important; }
+        }
+
+        /* ── Nav arrows ── */
+        .ed-arrow {
+          width: 40px; height: 40px;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.22s ease;
+          flex-shrink: 0;
+        }
+        .ed-arrow:hover {
+          box-shadow: 0 0 0 1px rgba(47,175,143,0.4);
+        }
+
+        /* ── Grain ── */
+        .ed-grain {
+          position: absolute; inset: 0; z-index: 1; pointer-events: none;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+          mix-blend-mode: screen;
+        }
+
+        /* ── Glow pulse ── */
+        @keyframes ed-glow-pulse {
+          0%,100% { opacity: 0.5 }
+          50%     { opacity: 0.9 }
+        }
+        .ed-glow { animation: ed-glow-pulse 5s ease-in-out infinite; }
       `}</style>
 
-      {/* Ambient glow */}
-      <div style={{
-        position:'absolute', top:'45%', left:'50%',
-        transform:'translate(-50%,-50%)',
-        width:900, height:600, zIndex:0, pointerEvents:'none',
-        background:'radial-gradient(ellipse,rgba(47,175,143,0.055) 0%,transparent 60%)',
-        filter:'blur(80px)',
-      }}/>
-
       {/* Grain */}
+      <div className="ed-grain" />
+
+      {/* Ambient glow — sigue la pantalla */}
+      <div className="ed-glow" style={{
+        position: 'absolute', top: '40%', right: '10%',
+        width: 600, height: 500, zIndex: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse, rgba(47,175,143,0.06) 0%, transparent 65%)',
+        filter: 'blur(60px)',
+      }} />
+
+      {/* ── LAYOUT PRINCIPAL ── */}
       <div style={{
-        position:'absolute', inset:0, zIndex:1, pointerEvents:'none',
-        backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")`,
-        mixBlendMode:'screen' as const,
-      }}/>
-
-      {/* Top dissolve */}
-      <div style={{ position:'absolute', top:0, insetInline:0, height:140, zIndex:20, pointerEvents:'none', background:'linear-gradient(to bottom,#060504 0%,transparent 100%)' }}/>
-      {/* Bottom dissolve */}
-      <div style={{ position:'absolute', bottom:0, insetInline:0, height:180, zIndex:20, pointerEvents:'none', background:'linear-gradient(to top,#060504 0%,transparent 100%)' }}/>
-
-      {/* Scan line */}
-      <div className="cine-scanline-bar"/>
-
-      <div style={{ position:'relative', zIndex:10, maxWidth:1400, margin:'0 auto', padding:'clamp(80px,10vw,140px) 0 clamp(80px,10vw,120px)' }}>
-
-        {/* ── HEADER ── */}
-        <ScrollReveal>
-          <div style={{ padding:'0 clamp(24px,5vw,80px)', marginBottom:'clamp(48px,7vw,80px)' }}>
-            <div style={{ display:'flex', flexDirection:'column', gap:0, maxWidth:680 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
-                <span style={{ width:6, height:6, borderRadius:'50%', background:'#2FAF8F', boxShadow:'0 0 10px rgba(47,175,143,1)', display:'inline-block' }}/>
-                <div style={{ height:1, width:32, background:'rgba(47,175,143,0.3)' }}/>
-                <span style={{ fontFamily:'Geist,sans-serif', fontSize:10, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase' as const, color:'#2FAF8F' }}>
-                  Plataforma
-                </span>
-              </div>
-              <h2 style={{ fontFamily:"'Instrument Serif',Georgia,serif", fontSize:'clamp(3rem,6vw,5.5rem)', lineHeight:0.88, letterSpacing:'-0.04em', margin:0 }}>
-                <span style={{ color:'rgba(255,255,255,0.93)', display:'block' }}>Una herramienta</span>
-                <em style={{ color:'rgba(255,255,255,0.11)', fontStyle:'italic', display:'block' }}>diseñada para el campo.</em>
-              </h2>
-            </div>
-          </div>
-        </ScrollReveal>
-
-        {/* ── CAROUSEL STAGE ── */}
-        <div style={{ position:'relative', width:'100%', overflow:'hidden', paddingBottom:'2px' }}>
-
-          {/* Side screens — previous */}
-          <div className="cine-side-screen cine-side-left">
-            <div className="cine-side-inner">
-              <img src={SHOWCASE_MODULES[prevIdx].src} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block' }}
-                onError={(e)=>{ (e.currentTarget as HTMLImageElement).style.display='none' }}
-              />
-              <div style={{ position:'absolute', inset:0, background:PLACEHOLDER_GRADIENTS[prevIdx] }}/>
-            </div>
+        position: 'relative', zIndex: 10,
+        maxWidth: 1400, margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: 'min(420px, 45%) 1fr',
+        gridTemplateRows: '1fr auto',
+        gridTemplateAreas: '"top image" "bottom image"',
+        minHeight: 'clamp(480px, 65vh, 780px)',
+      }}
+        className="ed-grid"
+      >
+        {/* ══════════════════════════════════════════════
+            EDITORIAL TOP — eyebrow + título + desc
+        ══════════════════════════════════════════════ */}
+        <div
+          className="ed-top"
+          style={{
+            gridArea: 'top',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            padding: 'clamp(48px,7vw,96px) clamp(28px,4vw,64px) clamp(24px,3vw,40px)',
+            borderRight: `1px solid ${divColor}`,
+            position: 'relative',
+          }}
+        >
+          {/* ── Eyebrow ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'clamp(20px,3vw,32px)' }}>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%',
+              background: '#2FAF8F',
+              boxShadow: '0 0 8px rgba(47,175,143,0.8)',
+              display: 'inline-block', flexShrink: 0,
+            }} />
+            <div style={{ height: 1, width: 28, background: 'rgba(47,175,143,0.3)', flexShrink: 0 }} />
+            <span style={{
+              fontFamily: 'Geist, sans-serif',
+              fontSize: 10, fontWeight: 700,
+              letterSpacing: '0.2em', textTransform: 'uppercase' as const,
+              color: labelColor,
+            }}>
+              Plataforma
+            </span>
           </div>
 
-          {/* Side screens — next */}
-          <div className="cine-side-screen cine-side-right">
-            <div className="cine-side-inner">
-              <img src={SHOWCASE_MODULES[nextIdx].src} alt="" loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block' }}
-                onError={(e)=>{ (e.currentTarget as HTMLImageElement).style.display='none' }}
-              />
-              <div style={{ position:'absolute', inset:0, background:PLACEHOLDER_GRADIENTS[nextIdx] }}/>
-            </div>
+          {/* Nombre del módulo */}
+          <div key={`title-${infoKey}`} className="ed-info-enter" style={{ animationDelay: '0.04s' }}>
+            <h2 style={{
+              fontFamily: "'Instrument Serif', Georgia, serif",
+              fontSize: 'clamp(2.6rem, 4.5vw, 4.2rem)',
+              lineHeight: 0.9,
+              letterSpacing: '-0.03em',
+              color: titleColor,
+              margin: '0 0 clamp(14px,2vw,22px)',
+              fontStyle: 'italic',
+            }}>
+              {mod.name}
+            </h2>
           </div>
 
-          {/* Pixel Point gradient masks — make sides dissolve into dark */}
-          <div className="cine-mask-left"/>
-          <div className="cine-mask-right"/>
-
-          {/* ── MAIN SCREEN — center stage ── */}
-          <div style={{ display:'flex', justifyContent:'center', padding:'0 clamp(24px,5vw,60px)', position:'relative', zIndex:10 }}>
-            <div style={{ position:'relative', width:'100%', maxWidth:900 }}>
-
-              {/* Screen wrapper — clip & stack */}
-              <div style={{ position:'relative', aspectRatio:'16/10', borderRadius:6, overflow:'hidden', background:'#0a0908' }} className="cine-screen-glow">
-
-                {/* Exit slide (prev active) */}
-                {prev !== null && (
-                  <div key={`exit-${prev}`} style={{ position:'absolute', inset:0 }}
-                    className={direction === 'next' ? 'cine-exit-next' : 'cine-exit-prev'}
-                  >
-                    <img src={SHOWCASE_MODULES[prev].src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block', filter:'brightness(0.85) saturate(0.92)' }}
-                      onError={(e)=>{ (e.currentTarget as HTMLImageElement).style.display='none' }}
-                    />
-                    <div style={{ position:'absolute', inset:0, background:PLACEHOLDER_GRADIENTS[prev] }}/>
-                  </div>
-                )}
-
-                {/* Active slide */}
-                <div key={`active-${active}`} style={{ position:'absolute', inset:0 }}
-                  className={animating ? (direction === 'next' ? 'cine-enter-next' : 'cine-enter-prev') : ''}
-                >
-                  {/* Actual screenshot */}
-                  <img
-                    src={mod.src}
-                    alt={`GANDIA 7 — ${mod.name}`}
-                    loading="lazy"
-                    style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center', display:'block', filter:'brightness(0.87) saturate(0.93)' }}
-                    onError={(e)=>{ (e.currentTarget as HTMLImageElement).style.display='none' }}
-                  />
-                  {/* Fallback gradient placeholder */}
-                  <div style={{ position:'absolute', inset:0, background:PLACEHOLDER_GRADIENTS[active] }}/>
-
-                  {/* Subtle inner overlay */}
-                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg,rgba(6,5,4,0.1) 0%,transparent 25%,transparent 60%,rgba(6,5,4,0.65) 100%)' }}/>
-
-                  {/* ── Letterbox top bar ── */}
-                  <div style={{ position:'absolute', top:0, left:0, right:0, height:32, background:'#060504', borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', padding:'0 16px', gap:8, zIndex:3 }}>
-                    <span style={{ fontFamily:'Geist,monospace', fontSize:9, fontWeight:600, letterSpacing:'0.14em', color:'rgba(255,255,255,0.2)', textTransform:'uppercase' as const }}>GANDIA·7</span>
-                    <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.04)' }}/>
-                    <span style={{ fontFamily:'Geist,monospace', fontSize:9, fontWeight:600, letterSpacing:'0.14em', color:'rgba(255,255,255,0.15)' }}>{mod.num}/08</span>
-                    <span style={{ width:5, height:5, borderRadius:'50%', background:'#2FAF8F', display:'inline-block' }} className="pulse-dot"/>
-                  </div>
-
-                  {/* ── Progress bar ── */}
-                  <div style={{ position:'absolute', top:32, left:0, right:0, height:2, background:'rgba(255,255,255,0.04)', zIndex:3 }}>
-                    {!paused && <div key={`bar-${active}-${infoKey}`} className="cine-progress-bar"/>}
-                  </div>
-
-                  {/* ── Module slug bottom-left ── */}
-                  <div style={{ position:'absolute', bottom:0, left:0, right:0, zIndex:3, padding:'60px 20px 18px', background:'linear-gradient(to top,rgba(6,5,4,0.88) 0%,transparent 100%)' }}>
-                    <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <span style={{ fontFamily:'Geist,monospace', fontSize:9, fontWeight:600, letterSpacing:'0.12em', color:'rgba(255,255,255,0.22)', textTransform:'uppercase' as const }}>[{mod.num.padStart(3,'0')}]</span>
-                        <div style={{ width:20, height:1, background:'rgba(255,255,255,0.15)' }}/>
-                        <span style={{ fontFamily:"'Instrument Serif',Georgia,serif", fontStyle:'italic', fontSize:15, color:'rgba(255,255,255,0.6)', letterSpacing:'-0.01em' }}>{mod.name}</span>
-                      </div>
-                      <div style={{ display:'flex', gap:4 }}>
-                        {[0,1,2].map(i => <div key={i} style={{ width:2, height:2, borderRadius:'50%', background:'rgba(255,255,255,0.2)' }}/>)}
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Corner gloss */}
-                <div style={{ position:'absolute', inset:0, zIndex:4, borderRadius:6, border:'1px solid rgba(255,255,255,0.07)', pointerEvents:'none' }}/>
-              </div>
-
-              {/* Under-screen ground glow */}
-              <div style={{ position:'absolute', bottom:-40, left:'50%', transform:'translateX(-50%)', width:'70%', height:80, background:'radial-gradient(ellipse,rgba(47,175,143,0.09) 0%,transparent 70%)', filter:'blur(24px)', pointerEvents:'none', zIndex:-1 }}/>
-            </div>
+          {/* Descripción */}
+          <div key={`desc-${infoKey}`} className="ed-info-enter" style={{ animationDelay: '0.1s' }}>
+            <p style={{
+              fontFamily: 'Geist, sans-serif',
+              fontSize: 'clamp(13px, 1.1vw, 14.5px)',
+              lineHeight: 1.8,
+              color: descColor,
+              fontWeight: 300,
+              margin: 0,
+              maxWidth: 340,
+            }}>
+              {mod.desc}
+            </p>
           </div>
 
-          {/* ── Nav arrows ── */}
-          <button className="cine-arrow cine-arrow-left" onClick={goPrev} aria-label="Módulo anterior">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button className="cine-arrow cine-arrow-right" onClick={goNext} aria-label="Módulo siguiente">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
+          {/* Divider */}
+          <div style={{ width: 32, height: 1, background: divColor, margin: 'clamp(20px,3vw,32px) 0' }} />
+
+          {/* Meta */}
+          <div key={`meta-${infoKey}`} className="ed-info-enter" style={{ animationDelay: '0.16s' }}>
+            <span style={{
+              fontFamily: 'Geist, monospace',
+              fontSize: 10, fontWeight: 600,
+              letterSpacing: '0.18em', textTransform: 'uppercase' as const,
+              color: metaColor,
+            }}>
+              {String(active + 1).padStart(2,'0')} / 08
+            </span>
+          </div>
         </div>
 
-        {/* ── INFO BLOCK — module name + description ── */}
-        <div style={{ padding:'0 clamp(24px,5vw,60px)' }}>
-          <div style={{ maxWidth:900, margin:'0 auto' }}>
-            <div key={infoKey} className="cine-info-enter" style={{ padding:'32px 0 0', display:'flex', flexDirection:'column' as const, gap:8 }}>
-              <div style={{ display:'flex', alignItems:'baseline', gap:16 }}>
-                <span style={{ fontFamily:"'Instrument Serif',Georgia,serif", fontStyle:'italic', fontSize:'clamp(2rem,4vw,3.2rem)', lineHeight:1, color:'rgba(255,255,255,0.88)', letterSpacing:'-0.03em' }}>
-                  {mod.name}
-                </span>
-                <span style={{ fontFamily:'Geist,sans-serif', fontSize:11, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase' as const, color:'rgba(47,175,143,0.65)', paddingBottom:4 }}>
-                  Módulo {mod.num}
-                </span>
-              </div>
-              <p style={{ fontFamily:'Geist,sans-serif', fontSize:13.5, lineHeight:1.75, color:'rgba(255,255,255,0.28)', fontWeight:300, maxWidth:520, margin:0 }}>
-                {mod.desc}
-              </p>
-            </div>
+        {/* ══════════════════════════════════════════════
+            EDITORIAL BOTTOM — progress + contact + flechas
+        ══════════════════════════════════════════════ */}
+        <div
+          className="ed-bottom"
+          style={{
+            gridArea: 'bottom',
+            padding: 'clamp(20px,3vw,32px) clamp(28px,4vw,64px) clamp(36px,5vw,56px)',
+            borderRight: `1px solid ${divColor}`,
+            borderTop: `1px solid ${divColor}`,
+          }}
+        >
+          {/* Progress bar */}
+          <div style={{
+            width: '100%', height: 1,
+            background: divColor,
+            marginBottom: 'clamp(20px,3vw,28px)',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {!paused && <div key={`prog-${infoKey}-${active}`} className="ed-progress-bar" />}
+          </div>
 
-            {/* ── Dots + counter ── */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:28 }}>
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                {SHOWCASE_MODULES.map((_, i) => (
-                  <button
-                    key={i}
-                    className="cine-dot"
-                    onClick={() => goTo(i, i > active ? 'next' : 'prev')}
-                    aria-label={`Ir a módulo ${i+1}`}
-                    style={{
-                      width: i === active ? 24 : 5,
-                      height: 5,
-                      borderRadius: 3,
-                      border: 'none',
-                      padding: 0,
-                      background: i === active ? '#2FAF8F' : 'rgba(255,255,255,0.15)',
-                      cursor: 'pointer',
-                      outline: 'none',
-                    }}
-                  />
-                ))}
+          {/* Contact sheet */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginBottom: 'clamp(16px,2.5vw,24px)' }}>
+            {SHOWCASE_MODULES.map((m, i) => (
+              <div
+                key={i}
+                className="ed-thumb"
+                onClick={() => goTo(i)}
+                style={{
+                  width: i === active ? 52 : 36,
+                  height: i === active ? 34 : 24,
+                  background: isDark ? '#0a0908' : '#e8e6e3',
+                  border: i === active ? '1px solid #2FAF8F' : `1px solid ${divColor}`,
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  opacity: i === active ? 1 : 0.35,
+                  transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+                  boxShadow: i === active ? '0 0 12px rgba(47,175,143,0.25)' : 'none',
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src={m.src} alt={m.name} loading="lazy"
+                  style={{
+                    width: '100%', height: '100%',
+                    objectFit: 'cover', objectPosition: 'top center', display: 'block',
+                    filter: i === active ? 'none' : 'saturate(0) brightness(0.6)',
+                    transition: 'filter 0.35s ease',
+                  }}
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                />
+                <div style={{ position: 'absolute', inset: 0, background: PLACEHOLDER_GRADIENTS[i] }} />
               </div>
-              <span style={{ fontFamily:'Geist,monospace', fontSize:10, fontWeight:600, letterSpacing:'0.14em', color:'rgba(255,255,255,0.16)' }}>
-                {String(active + 1).padStart(2,'0')} / 08
+            ))}
+          </div>
+
+          {/* Flechas */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="ed-arrow" onClick={goPrev} aria-label="Módulo anterior"
+              style={{ background: arrowBg, border: `1px solid ${arrowBorder}`, backdropFilter: 'blur(8px)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={arrowStroke} strokeWidth="2" strokeLinecap="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <button className="ed-arrow" onClick={goNext} aria-label="Módulo siguiente"
+              style={{ background: arrowBg, border: `1px solid ${arrowBorder}`, backdropFilter: 'blur(8px)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={arrowStroke} strokeWidth="2" strokeLinecap="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════
+            COLUMNA DERECHA — SCREEN A SANGRE
+        ══════════════════════════════════════════════ */}
+        <div className="ed-col-right" style={{ position: 'relative', overflow: 'hidden', gridArea: 'image' }}>
+
+          {/* Imagen activa — clip-path reveal */}
+          <div
+            key={`screen-${active}`}
+            className="ed-screen-reveal"
+            style={{
+              position: 'absolute', inset: 0,
+              background: isDark ? '#0a0908' : '#e8e6e3',
+            }}
+          >
+            <img
+              src={mod.src}
+              alt={`GANDIA 7 — ${mod.name}`}
+              loading="lazy"
+              style={{
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'top center',
+                display: 'block',
+              }}
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+            {/* Placeholder gradient detrás */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: PLACEHOLDER_GRADIENTS[active],
+              zIndex: 0,
+            }} />
+          </div>
+
+          {/* Imagen saliente */}
+          {prev !== null && (
+            <div
+              key={`screen-exit-${prev}`}
+              className="ed-screen-exit"
+              style={{ background: isDark ? '#0a0908' : '#e8e6e3', zIndex: 5 }}
+            >
+              <img
+                src={SHOWCASE_MODULES[prev].src}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: PLACEHOLDER_GRADIENTS[prev], zIndex: 0,
+              }} />
+            </div>
+          )}
+
+          {/* Máscara izquierda — fusiona con columna editorial */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0,
+            width: 80, zIndex: 20, pointerEvents: 'none',
+            background: `linear-gradient(to right, ${bg} 0%, transparent 100%)`,
+          }} />
+
+          {/* Overlay oscuro sutil encima de la imagen */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none',
+            background: isDark
+              ? 'linear-gradient(to bottom, rgba(6,5,4,0.15) 0%, rgba(6,5,4,0) 30%)'
+              : 'linear-gradient(to bottom, rgba(245,244,243,0.12) 0%, rgba(245,244,243,0) 30%)',
+          }} />
+
+          {/* Etiqueta módulo — esquina inferior derecha */}
+          <div key={`badge-${infoKey}`} className="ed-info-enter" style={{
+            position: 'absolute', bottom: 'clamp(16px,2.5vw,28px)', right: 'clamp(16px,2.5vw,28px)',
+            zIndex: 30, animationDelay: '0.2s',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px',
+              background: isDark ? 'rgba(6,5,4,0.75)' : 'rgba(245,244,243,0.85)',
+              backdropFilter: 'blur(12px)',
+              border: `1px solid ${divColor}`,
+              borderRadius: 4,
+            }}>
+              <span style={{
+                width: 4, height: 4, borderRadius: '50%',
+                background: '#2FAF8F', display: 'inline-block', flexShrink: 0,
+              }} />
+              <span style={{
+                fontFamily: 'Geist, monospace',
+                fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.16em', textTransform: 'uppercase' as const,
+                color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+              }}>
+                [{mod.num.padStart(3,'0')}] {mod.name}
               </span>
             </div>
           </div>
         </div>
-
       </div>
     </section>
   )
@@ -1660,7 +1717,7 @@ function Home() {
                   <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                     <iframe
                       className="absolute inset-0 w-full h-full"
-                      src="https://www.youtube.com/embed/dQw4w9WgXcQ?controls=1&modestbranding=1&rel=0"
+                      src=""
                       title="GANDIA 7 - Sistema de Trazabilidad Ganadera"
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1802,7 +1859,7 @@ function Home() {
 
         </main>
 
-        <Footer isDark={isDark} />
+        <Footer />
         <CookieBanner isDark={isDark} />
       </div>
     </>
