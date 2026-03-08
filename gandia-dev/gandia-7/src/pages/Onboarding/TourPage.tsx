@@ -5,7 +5,7 @@ import { Sparkles, MessageSquare, FileText, Bell, User, ArrowRight, X } from 'lu
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
-type UserRole = 'productor' | 'mvz' | 'exportador' | 'auditor' | 'union_ganadera' | null
+type UserRole = 'productor' | 'mvz' | 'exportador' | 'auditor' | 'union' | null
 
 interface UserData {
   nombre: string
@@ -21,7 +21,7 @@ interface SpotlightRect {
 // ─── COPY POR ROL ─────────────────────────────────────────────────────────────
 
 function getChatCopy(role: UserRole) {
-  if (role === 'union_ganadera') return 'Consulta reportes de toda la región, normativa y decisiones institucionales al instante.'
+  if (role === 'union') return 'Consulta reportes de toda la región, normativa y decisiones institucionales al instante.'
   if (role === 'mvz')           return 'Accede a protocolos sanitarios, expedientes y guías de certificación en segundos.'
   if (role === 'exportador')    return 'Consulta requisitos USDA, aranceles y estatus de tus trámites de exportación.'
   if (role === 'auditor')       return 'Revisa normativa, historial de decisiones y genera reportes de auditoría.'
@@ -29,7 +29,7 @@ function getChatCopy(role: UserRole) {
 }
 
 function getTramitesCopy(role: UserRole) {
-  if (role === 'union_ganadera') return 'Revisa y aprueba expedientes de todos los municipios del estado. Flujo completo en un solo lugar.'
+  if (role === 'union') return 'Revisa y aprueba expedientes de todos los municipios del estado. Flujo completo en un solo lugar.'
   if (role === 'mvz')           return 'Gestiona dictámenes, certificados sanitarios y documentación de tus clientes.'
   if (role === 'exportador')    return 'Da seguimiento a tus exportaciones, movilizaciones y regularizaciones activas.'
   return 'Gestiona certificaciones, exportaciones y movilizaciones sin papeles ni filas.'

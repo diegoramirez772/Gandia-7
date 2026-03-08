@@ -276,10 +276,18 @@ function ModalNuevoTramite({ municipioId, onClose, onCreado }: {
     if (!upp.trim() || !productor.trim() || !numAnimales) { setErr('Completa todos los campos'); return }
     setSaving(true); setErr(null)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Evitar congelamiento de Supabase SDK leyendo directo de localStorage
+      const rawSession = localStorage.getItem('gandia-auth-token')
+      let userIdStr = ''
+      if (rawSession) {
+        const session = JSON.parse(rawSession)
+        userIdStr = session?.user?.id || ''
+      }
+      if (!userIdStr) throw new Error('No se encontró la sesión activa')
+
       const id = await crearTramite({
         upp: upp.trim(), tipo, numAnimales: parseInt(numAnimales),
-        productor: productor.trim(), municipioId, userId: user?.id ?? '',
+        productor: productor.trim(), municipioId, userId: userIdStr,
       })
       onCreado(id)
     } catch (e) {
