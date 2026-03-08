@@ -99,12 +99,24 @@ const routeAfterLogin = async (navigate: ReturnType<typeof useNavigate>) => {
   try {
     const profile = await getCurrentProfile()
     if (!profile) {
+      // Leer sesión directo de localStorage (getSession() cuelga)
+      try {
+        const raw = localStorage.getItem('gandia-auth-token')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed?.user) {
+            const provider = parsed.user.app_metadata?.provider as string || 'email'
+            localStorage.setItem('signup-auth-method', provider)
+            if (parsed.user.email) localStorage.setItem('signup-email', parsed.user.email)
+          }
+        }
+      } catch { /* ignore */ }
       navigate('/signup/personal', { replace: true })
       return
     }
     const status = profile.status as string
     if (status === 'approved') {
-      navigate('/chat', { replace: true })
+      navigate(profile.onboarding_completed ? '/chat' : '/onboarding', { replace: true })
     } else {
       const accountId = profile?.account_id || ''
       localStorage.setItem('signup-completed', 'true')

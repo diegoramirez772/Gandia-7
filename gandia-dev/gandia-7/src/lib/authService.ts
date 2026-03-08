@@ -361,71 +361,104 @@ export const checkProfileExists = async (email: string): Promise<boolean> => {
  * Retorna el account_id generado por Supabase.
  */
 
-// Envuelve cualquier promesa con un timeout para que NUNCA cuelgue indefinidamente
-function withTimeout<T>(thenable: PromiseLike<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    Promise.resolve(thenable),
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout (${ms}ms) en: ${label}`)), ms)
-    ),
-  ])
+// ─── HELPER: leer sesión sin colgarse ────────────────────────────────────────
+// supabase.auth.getSession() se cuelga a veces por el lock interno del SDK.
+// Leemos directamente de localStorage donde sabemos que está el token.
+function getSessionUserIdFromStorage(): { userId: string; email: string } | null {
+  try {
+    const raw = localStorage.getItem('gandia-auth-token')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const userId = parsed?.user?.id
+    const email = parsed?.user?.email || ''
+    if (userId) return { userId, email }
+  } catch { /* ignore */ }
+  return null
+}
+
+// Intentar getSession con timeout corto — si cuelga, abortar silenciosamente
+async function getSessionSafe(timeoutMs = 3000): Promise<{ userId: string; email: string } | null> {
+  // 1. Primero leer directo de localStorage (instantáneo, nunca cuelga)
+  const fromStorage = getSessionUserIdFromStorage()
+  if (fromStorage) return fromStorage
+
+  // 2. Fallback: intentar SDK con timeout
+  try {
+    const sessionPromise = supabase.auth.getSession()
+    const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs))
+    const result = await Promise.race([sessionPromise, timeoutPromise])
+    if (result && 'data' in result && result.data.session?.user) {
+      return {
+        userId: result.data.session.user.id,
+        email: result.data.session.user.email || '',
+      }
+    }
+  } catch { /* ignore */ }
+  return null
 }
 
 export const createUserProfile = async (
   payload: UserProfilePayload
 ): Promise<string> => {
 
-  // ── 1. Obtener UID del usuario ────────────────────────────────────────────
-  // Prioridad: payload.user_id (ya resuelto en SignUpConfirmation) > getSession > getUser
+  console.log('[createUserProfile] ▶ INICIO')
+
+  // ── 1. Resolver userId y email ────────────────────────────────────────────
   let resolvedUserId = payload.user_id || ''
-  let sessionEmail   = ''
+  let resolvedEmail  = payload.email || ''
 
-  if (!resolvedUserId) {
-    // getSession() lee de caché/localStorage
-    const { data: { session } } = await withTimeout(supabase.auth.getSession(), 6000, 'getSession')
-    if (session?.user) {
-      resolvedUserId = session.user.id
-      sessionEmail   = session.user.email ?? ''
+  // Leer de gandia-auth-token (más confiable que el SDK que se cuelga)
+  try {
+    const raw = localStorage.getItem('gandia-auth-token')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (!resolvedUserId) resolvedUserId = parsed?.user?.id || ''
+      if (!resolvedEmail)  resolvedEmail  = parsed?.user?.email || ''
     }
-  }
+  } catch { /* ignore */ }
 
-  if (!resolvedUserId) {
-    // getUser() hace llamada directa a la API — más confiable con múltiples instancias
-    const { data: { user } } = await withTimeout(supabase.auth.getUser(), 8000, 'getUser')
-    if (user) {
-      resolvedUserId = user.id
-      sessionEmail   = user.email ?? ''
-    }
-  }
+  if (!resolvedUserId) resolvedUserId = localStorage.getItem('signup-user-id') || ''
+  if (!resolvedEmail)  resolvedEmail  = localStorage.getItem('signup-email') || ''
 
-  if (!resolvedUserId) {
-    // Último recurso: userId guardado en localStorage
-    resolvedUserId = typeof window !== 'undefined'
-      ? localStorage.getItem('signup-user-id') ?? ''
-      : ''
-  }
+  if (!resolvedUserId) throw new Error('No se pudo obtener la sesión activa. Recarga la página.')
+  const normalizedEmail = normalizeEmail(resolvedEmail)
+  if (!normalizedEmail) throw new Error('No se pudo determinar el correo del usuario.')
 
-  if (!resolvedUserId) {
-    throw new Error('No se pudo obtener la sesión activa. Recarga la página e intenta de nuevo.')
-  }
+  console.log('[createUserProfile] userId:', resolvedUserId, 'email:', normalizedEmail)
 
-  const normalizedEmail = normalizeEmail(payload.email || sessionEmail || '')
-  if (!normalizedEmail) {
-    throw new Error('No se pudo determinar el correo del usuario.')
+  // ── Obtener access_token y URL para fetch directo ─────────────────────────
+  let accessToken = ''
+  try {
+    const raw = localStorage.getItem('gandia-auth-token')
+    if (raw) accessToken = JSON.parse(raw)?.access_token || ''
+  } catch { /* ignore */ }
+
+  const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const restUrl      = `${supabaseUrl}/rest/v1/user_profiles`
+
+  const headers: Record<string, string> = {
+    'Content-Type':  'application/json',
+    'apikey':        supabaseAnon,
+    'Authorization': `Bearer ${accessToken || supabaseAnon}`,
+    'Prefer':        'return=minimal',
   }
 
   // ── 2. Verificar si ya existe (para reintentos seguros) ──────────────────
-  const dupResult = await withTimeout(
-    Promise.resolve(
-      supabase.from('user_profiles').select('account_id').eq('email', normalizedEmail).maybeSingle()
-    ),
-    8000,
-    'checkDuplicate'
-  )
-  const dupCheck = (dupResult as { data: { account_id: string } | null }).data
-
-  if (dupCheck) {
-      return dupCheck.account_id || ''
+  try {
+    console.log('[createUserProfile] 2. checkDuplicate...')
+    const checkResp = await fetch(
+      `${restUrl}?email=eq.${encodeURIComponent(normalizedEmail)}&select=account_id`,
+      { method: 'GET', headers }
+    )
+    const checkData = await checkResp.json()
+    console.log('[createUserProfile] 2. checkDuplicate result:', checkData)
+    if (Array.isArray(checkData) && checkData.length > 0 && checkData[0].account_id) {
+      console.log('[createUserProfile] ✓ Ya existe, account_id:', checkData[0].account_id)
+      return checkData[0].account_id
+    }
+  } catch (e) {
+    console.warn('[createUserProfile] 2. checkDuplicate falló:', e)
   }
 
   // ── 3. INSERT ─────────────────────────────────────────────────────────
@@ -447,38 +480,56 @@ export const createUserProfile = async (
     },
   }
 
-  const insertResult = await withTimeout(
-    Promise.resolve(supabase.from('user_profiles').insert([profileRow])),
-    10000,
-    'INSERT user_profiles'
-  )
-  const insertError = (insertResult as { error: { code: string; message: string } | null }).error
+  console.log('[createUserProfile] 3. INSERT...', JSON.stringify(profileRow).slice(0, 200))
 
+  const insertResp = await fetch(restUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(profileRow),
+  })
 
-  if (insertError) {
-    if (insertError.code === '23505') {
-      const dup = await supabase.from('user_profiles').select('account_id').eq('email', normalizedEmail).maybeSingle()
-      return (dup.data as { account_id: string } | null)?.account_id || ''
+  console.log('[createUserProfile] 3. INSERT status:', insertResp.status, insertResp.statusText)
+
+  if (!insertResp.ok) {
+    const errBody = await insertResp.text()
+    console.error('[createUserProfile] 3. INSERT error body:', errBody)
+
+    // Duplicado (409 Conflict o error 23505)
+    if (insertResp.status === 409 || errBody.includes('23505')) {
+      try {
+        const dupResp = await fetch(
+          `${restUrl}?email=eq.${encodeURIComponent(normalizedEmail)}&select=account_id`,
+          { method: 'GET', headers }
+        )
+        const dupData = await dupResp.json()
+        return Array.isArray(dupData) && dupData[0]?.account_id ? dupData[0].account_id : ''
+      } catch { return '' }
     }
-    if (insertError.code === '42501') {
-      throw new Error('Sin permisos para crear el perfil (RLS). Recarga la página y vuelve a intentar.')
+
+    if (insertResp.status === 403 || errBody.includes('42501')) {
+      throw new Error('Sin permisos para crear el perfil (RLS). Recarga la página.')
     }
-    throw new Error(`Error al guardar el perfil: ${parseSupabaseError(insertError)}`)
+
+    throw new Error(`Error al guardar el perfil (${insertResp.status}): ${errBody.slice(0, 200)}`)
   }
 
-  // ── 5. Leer account_id generado por trigger ───────────────────────────────
-  await new Promise(resolve => setTimeout(resolve, 500))
+  console.log('[createUserProfile] ✓ INSERT exitoso')
 
-  const selectResult = await withTimeout(
-    Promise.resolve(
-      supabase.from('user_profiles').select('account_id').eq('email', normalizedEmail).maybeSingle()
-    ),
-    8000,
-    'SELECT account_id'
-  )
-  const created = (selectResult as { data: { account_id: string } | null }).data
-
-  return created?.account_id || ''
+  // ── 4. Leer account_id generado por trigger ────────────────────────────
+  try {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    console.log('[createUserProfile] 4. SELECT account_id...')
+    const selectResp = await fetch(
+      `${restUrl}?email=eq.${encodeURIComponent(normalizedEmail)}&select=account_id`,
+      { method: 'GET', headers }
+    )
+    const selectData = await selectResp.json()
+    console.log('[createUserProfile] 4. account_id:', selectData)
+    return Array.isArray(selectData) && selectData[0]?.account_id ? selectData[0].account_id : ''
+  } catch {
+    console.warn('[createUserProfile] 4. No se pudo obtener account_id')
+    return ''
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -493,9 +544,9 @@ export const getCurrentUser = async () => {
 
 // ── CAMBIO 3: getCurrentProfile retorna UserProfile tipado con role ──────────
 export const getCurrentProfile = async (): Promise<UserProfile | null> => {
-  // Usar getSession() en lugar de getUser() — lee de localStorage, no hace HTTP
-  const { data: { session } } = await supabase.auth.getSession()
-  const uid = session?.user?.id
+  // Leer userId sin colgarse — getSession() puede bloquearse indefinidamente
+  const safe = await getSessionSafe()
+  const uid = safe?.userId
   if (!uid) return null
 
   const { data, error } = await supabase

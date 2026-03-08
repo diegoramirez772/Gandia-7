@@ -7,4 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    port: 5173,       // Puerto fijo — Supabase guarda la sesión por origin.
+    strictPort: true, // Si 5173 está ocupado, falla en lugar de usar otro puerto.
+  },
 })

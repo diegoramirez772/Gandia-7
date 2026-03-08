@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 
 /**
  * /tramites — punto de entrada
- * Lee el rol real desde user_profiles en Supabase.
+ * Lee el rol real desde localStorage o user_profiles en Supabase.
  *   union_ganadera  →  /tramites/panel
  *   todos los demás →  /chat (con contexto tramites)
  */
@@ -15,28 +15,54 @@ export default function Tramites() {
     let cancelled = false
 
     async function redirect() {
-      const { data: { user } } = await supabase.auth.getUser()
+      try {
+        // 1. Obtener la sesión segura (o desde localStorage)
+        const rawSession = localStorage.getItem('gandia-auth-token')
+        if (!rawSession && !cancelled) {
+          navigate('/login', { replace: true })
+          return
+        }
 
-      if (!user) {
-        navigate('/login', { replace: true })
-        return
-      }
+        const session = JSON.parse(rawSession as string)
+        const userId = session.user?.id
+        const accessToken = session.access_token
 
-      // Intentar primero user_profiles (tabla principal)
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle()
+        if ((!userId || !accessToken) && !cancelled) {
+          navigate('/login', { replace: true })
+          return
+        }
 
-      const role = profile?.role ?? null
+        // 2. Obtener el perfil usando fetch directo para evitar el bloqueo del SDK
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-      if (cancelled) return
+        const res = await fetch(`${supabaseUrl}/rest/v1/user_profiles?user_id=eq.${userId}&select=role`, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseAnon,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        })
 
-      if (role === 'union_ganadera') {
-        navigate('/tramites/panel', { replace: true })
-      } else {
-        navigate('/chat', { replace: true, state: { context: 'tramites' } })
+        if (!res.ok) throw new Error('Error al obtener perfil')
+        
+        const data = await res.json()
+        const role = data && data.length > 0 ? data[0].role : null
+
+        if (cancelled) return
+
+        if (role === 'union_ganadera') {
+          navigate('/tramites/panel', { replace: true })
+        } else {
+          navigate('/chat', { replace: true, state: { context: 'tramites' } })
+        }
+      } catch (err) {
+        console.error('[Tramites] Error en redirección:', err)
+        if (!cancelled) {
+          // Fallback a chat en caso de error
+          navigate('/chat', { replace: true, state: { context: 'tramites' } })
+        }
       }
     }
 

@@ -65,7 +65,7 @@ function AppLayout() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const navigate    = useNavigate()
   const location    = useLocation()
-  const { profile, isLoading: profileLoading } = useUser()
+  const { profile, profileReady } = useUser()
   const { unreadCount } = useNotifications()
 
   // Derivar datos de display desde el perfil del contexto
@@ -83,8 +83,8 @@ function AppLayout() {
       ? ranchName
       : ROLE_NAMES[roleCode] || roleCode
 
-  const avatarLetter = (displayName || profile?.email || '').charAt(0).toUpperCase() || (profileLoading ? '' : '?')
-  const ranchLetter  = (ranchName || displayName || profile?.email || '').charAt(0).toUpperCase() || (profileLoading ? '' : '?')
+  const avatarLetter = !profileReady ? '' : (displayName || profile?.email || '?').charAt(0).toUpperCase()
+  const ranchLetter  = !profileReady ? '' : (ranchName || displayName || profile?.email || '?').charAt(0).toUpperCase()
 
   const currentUser = { displayName, subtitle, email: profile?.email ?? '', avatarLetter, ranchLetter }
 
@@ -131,6 +131,7 @@ function AppLayout() {
       // Limpieza manual como respaldo por si el evento SIGNED_OUT no dispara
       ;['signup-auth-method', 'signup-email', 'signup-personal-data',
         'signup-institutional-data', 'signup-completed', 'user-status', 'account-id',
+        'gandia-auth-token',
       ].forEach(key => localStorage.removeItem(key))
 
       setIsLoggingOut(false)
@@ -771,7 +772,10 @@ function Avatar({ letter, size = 32 }: { letter: string; size?: number }) {
       className="rounded-full bg-gradient-to-br from-[#2FAF8F] to-[#1a9070] flex items-center justify-center text-white font-bold shrink-0 shadow-sm"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
     >
-      {letter}
+      {letter
+        ? letter
+        : <div className="border-[1.5px] border-white border-t-transparent rounded-full animate-spin" style={{ width: Math.round(size * 0.45), height: Math.round(size * 0.45) }} />
+      }
     </div>
   )
 }

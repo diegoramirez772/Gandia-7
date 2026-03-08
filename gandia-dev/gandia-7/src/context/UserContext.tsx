@@ -1,7 +1,10 @@
-/**
- * GANDIA — UserContext
- */
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react'
 import type { ReactNode } from 'react'
 import type { UserProfile, UserRole } from '../lib/authService'
 import { supabase } from '../lib/supabaseClient'
@@ -13,6 +16,8 @@ export interface AppPreferences {
   font:  'geist' | 'serif' | 'lora'
 }
 
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
+
 const FONT_FAMILIES: Record<AppPreferences['font'], string> = {
   geist: "'Geist', system-ui, sans-serif",
   serif: "'Instrument Serif', Georgia, serif",
@@ -21,7 +26,21 @@ const FONT_FAMILIES: Record<AppPreferences['font'], string> = {
 
 const DEFAULT_PREFERENCES: AppPreferences = { theme: 'dark', font: 'geist' }
 
-// ─── APPLY TO DOM ─────────────────────────────────────────────────────────────
+// ─── Lee localStorage síncronamente para no arrancar en 'loading' ─────────────
+function getInitialAuthStatus(): AuthStatus {
+  try {
+    const raw = localStorage.getItem('gandia-auth-token')
+    if (!raw) return 'unauthenticated'
+    const parsed = JSON.parse(raw)
+    // Si el token expiró, Supabase lo renovará con el refresh_token — igual hay sesión.
+    // Solo devolvemos unauthenticated si no hay access_token en absoluto.
+    return parsed?.access_token ? 'authenticated' : 'unauthenticated'
+  } catch {
+    return 'unauthenticated'
+  }
+}
+
+// ─── DOM ──────────────────────────────────────────────────────────────────────
 
 function applyPreferencesToDOM(prefs: AppPreferences) {
   document.documentElement.classList.toggle('dark', prefs.theme === 'dark')
@@ -36,39 +55,78 @@ interface UserContextValue {
   profile:         UserProfile | null
   role:            UserRole | null
   preferences:     AppPreferences
+  authStatus:      AuthStatus
   isLoading:       boolean
-  isAuthenticated: boolean  // true si hay sesión Supabase activa (con o sin perfil en DB)
-  hasProfile:      boolean  // true solo si el perfil ya fue creado en user_profiles
+  isAuthenticated: boolean
+  hasProfile:      boolean
+  profileReady:    boolean   // ← TRUE cuando fetchProfile terminó (con o sin resultado)
   refreshProfile:  () => Promise<void>
   clearProfile:    () => void
 }
 
 const UserContext = createContext<UserContextValue>({
-  profile: null, role: null, isLoading: true, isAuthenticated: false, hasProfile: false,
-  preferences: DEFAULT_PREFERENCES,
-  refreshProfile: async () => {}, clearProfile: () => {},
+  profile:         null,
+  role:            null,
+  authStatus:      'loading',
+  isLoading:       true,
+  isAuthenticated: false,
+  hasProfile:      false,
+  profileReady:    false,
+  preferences:     DEFAULT_PREFERENCES,
+  refreshProfile:  async () => {},
+  clearProfile:    () => {},
 })
 
+// ─── HELPER ───────────────────────────────────────────────────────────────────
+
 async function fetchProfile(uid: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
-    .from('user_profiles').select('*').eq('user_id', uid).maybeSingle()
-  if (error || !data) return null
-  return data as UserProfile
+  try {
+    const rawSession = localStorage.getItem('gandia-auth-token')
+    if (!rawSession) return null
+    const session = JSON.parse(rawSession)
+    const accessToken = session.access_token
+
+    if (!accessToken) return null
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+    const res = await fetch(`${supabaseUrl}/rest/v1/user_profiles?user_id=eq.${uid}`, {
+      method: 'GET',
+      headers: {
+        'apikey': supabaseAnon,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) return null
+    const data = await res.json()
+    return data && data.length > 0 ? (data[0] as UserProfile) : null
+  } catch {
+    return null
+  }
 }
 
+// ─── PROVIDER ─────────────────────────────────────────────────────────────────
+
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [profile,     setProfile]  = useState<UserProfile | null>(null)
-  const [preferences, setPrefs]    = useState<AppPreferences>(DEFAULT_PREFERENCES)
-  const [isLoading,   setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuth] = useState(false) // sesión activa
-  const [hasProfile,  setHasProfile] = useState(false)  // perfil en DB
+  const [profile,      setProfile]      = useState<UserProfile | null>(null)
+  const [preferences,  setPrefs]        = useState<AppPreferences>(DEFAULT_PREFERENCES)
+  const [hasProfile,   setHasProfile]   = useState(false)
+  const [profileReady, setProfileReady] = useState(false)  // ← nuevo flag
+  const [authStatus,   setAuthStatus]   = useState<AuthStatus>(getInitialAuthStatus)
 
-  const applyProfile = useCallback((p: UserProfile | null, sessionActive = true) => {
+  const isLoading       = authStatus === 'loading'
+  const isAuthenticated = authStatus === 'authenticated'
+
+  // ── Setters ───────────────────────────────────────────────────────────────
+
+  const applyProfile = useCallback((p: UserProfile | null, sessionActive: boolean) => {
     setProfile(p)
-    setIsAuth(sessionActive)       // autenticado = hay sesión, independiente del perfil
-    setHasProfile(!!p)             // perfil = existe registro en user_profiles
-    setIsLoading(false)
-
+    setHasProfile(!!p)
+    setAuthStatus(sessionActive ? 'authenticated' : 'unauthenticated')
+    setProfileReady(true)   // ← perfil resuelto (con o sin datos)
     const prefs: AppPreferences = {
       theme: p?.preferences?.theme ?? DEFAULT_PREFERENCES.theme,
       font:  p?.preferences?.font  ?? DEFAULT_PREFERENCES.font,
@@ -78,48 +136,95 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const clearProfile = useCallback(() => {
-    setProfile(null); setIsAuth(false); setHasProfile(false); setIsLoading(false)
+    setProfile(null)
+    setHasProfile(false)
+    setAuthStatus('unauthenticated')
+    setProfileReady(true)   // ← también resuelto: sabemos que no hay sesión
     setPrefs(DEFAULT_PREFERENCES)
+    applyPreferencesToDOM(DEFAULT_PREFERENCES)
   }, [])
 
   const refreshProfile = useCallback(async () => {
-    setIsLoading(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user?.id) { clearProfile(); return }
-    // Sesión existe aunque el perfil en DB aún no
-    applyProfile(await fetchProfile(session.user.id), true)
+    setProfileReady(false)
+    const rawSession = localStorage.getItem('gandia-auth-token')
+    if (!rawSession) { clearProfile(); return }
+    try {
+      const session = JSON.parse(rawSession)
+      if (!session?.user?.id) { clearProfile(); return }
+      applyProfile(await fetchProfile(session.user.id), true)
+    } catch {
+      clearProfile()
+    }
   }, [applyProfile, clearProfile])
 
+  // ── Auth listener ─────────────────────────────────────────────────────────
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.id) {
-        fetchProfile(session.user.id).then(p => applyProfile(p, true))
-      } else {
-        clearProfile()
-      }
-    })
+    let cancelled = false
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[UserContext]', event)
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user?.id) applyProfile(await fetchProfile(session.user.id), true)
+    // Paso 1: resolver sesión y cargar perfil desde localStorage
+    const rawSession = localStorage.getItem('gandia-auth-token')
+    if (rawSession) {
+      try {
+        const session = JSON.parse(rawSession)
+        if (session?.user?.id) {
+          fetchProfile(session.user.id).then(p => {
+            if (cancelled) return
+            applyProfile(p, true)
+          }).catch(() => {
+            if (!cancelled) clearProfile()
+          })
+        } else {
+          if (!cancelled) clearProfile()
+        }
+      } catch {
+        if (!cancelled) clearProfile()
       }
-      if (event === 'SIGNED_OUT') clearProfile()
-    })
+    } else {
+      clearProfile()
+    }
 
-    return () => subscription.unsubscribe()
+    // Paso 2: cambios futuros de sesión (mantenemos events del onAuthStateChange como fallback)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[UserContext]', event)
+        if (event === 'INITIAL_SESSION') return  // ya manejado arriba
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user?.id) {
+            applyProfile(await fetchProfile(session.user.id), true)
+          }
+          return
+        }
+        if (event === 'SIGNED_OUT') clearProfile()
+      }
+    )
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [applyProfile, clearProfile])
 
   return (
     <UserContext.Provider value={{
-      profile, role: profile?.role ?? null,
-      preferences, isLoading, isAuthenticated, hasProfile,
-      refreshProfile, clearProfile,
+      profile,
+      role:         profile?.role ?? null,
+      preferences,
+      authStatus,
+      isLoading,
+      isAuthenticated,
+      hasProfile,
+      profileReady,
+      refreshProfile,
+      clearProfile,
     }}>
       {children}
     </UserContext.Provider>
   )
 }
+
+// ─── HOOK ─────────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {

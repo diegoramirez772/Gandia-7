@@ -243,6 +243,15 @@ const SignUpInstitutional = () => {
     if (inputEnabled && inputRef.current) inputRef.current.focus()
   }, [inputEnabled])
 
+  // Almacenamiento local persistente del estado del cuestionario
+  useEffect(() => {
+    if (userRole && (questionIndex > 0 || messages.length > 0)) {
+      localStorage.setItem('signup-institutional-state', JSON.stringify({
+        institutionalData, questionIndex, messages, inputEnabled, userRole
+      }))
+    }
+  }, [institutionalData, questionIndex, messages, inputEnabled, userRole])
+
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true
@@ -256,6 +265,22 @@ const SignUpInstitutional = () => {
       if (!role || !questionFlows[role]) throw new Error('Rol inválido')
 
       setUserRole(role)
+
+      const savedState = localStorage.getItem('signup-institutional-state')
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState)
+          if (parsed.messages && parsed.messages.length > 0 && parsed.userRole === role) {
+            setInstitutionalData(parsed.institutionalData)
+            setQuestionIndex(parsed.questionIndex)
+            setMessages(parsed.messages)
+            setInputEnabled(parsed.inputEnabled)
+            return
+          }
+        } catch (e) {
+          console.error('Error restaurando progreso institucional:', e)
+        }
+      }
 
       const roleNames: Record<Role, string> = {
         producer: 'productor ganadero',
@@ -295,6 +320,7 @@ const SignUpInstitutional = () => {
       'Sí, regresar',
       () => {
         closeModal()
+        localStorage.removeItem('signup-institutional-state')
         localStorage.removeItem('signup-institutional-data')
         navigate('/signup/personal')
       }
@@ -424,6 +450,7 @@ const SignUpInstitutional = () => {
         } catch (e) {
           console.error('Error guardando datos institucionales:', e)
         }
+        localStorage.removeItem('signup-institutional-state')
         setTimeout(() => navigate('/signup/confirmation'), 2000)
       }, 800)
     }, 500)

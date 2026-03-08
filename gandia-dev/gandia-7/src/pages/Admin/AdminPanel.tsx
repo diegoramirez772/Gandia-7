@@ -121,8 +121,51 @@ const FIELD_LABELS: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 class AdminService {
   async verifyAdminCredentials(email: string, password: string): Promise<string | null> {
+    // 1. Limpiar sesión previa (OAuth de Google puede bloquear signInWithPassword)
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
+    // Limpiar también el token de localStorage
+    localStorage.removeItem('gandia-auth-token')
+
+    // 2. Intentar login con SDK
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-    if (authError) return authError.message
+
+    if (authError) {
+      // Si el SDK falla con 400, intentar con fetch directo
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      try {
+        const resp = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnon,
+          },
+          body: JSON.stringify({ email, password }),
+        })
+
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}))
+          return errBody?.error_description || errBody?.msg || authError.message
+        }
+
+        // Guardar el token manualmente para que las llamadas RPC funcionen
+        const tokenData = await resp.json()
+        localStorage.setItem('gandia-auth-token', JSON.stringify(tokenData))
+
+        // Establecer la sesión en el SDK
+        if (tokenData.access_token && tokenData.refresh_token) {
+          await supabase.auth.setSession({
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+          })
+        }
+      } catch (fetchErr) {
+        return authError.message
+      }
+    }
+
+    // 3. Verificar que es admin
     const { data, error: rpcError } = await supabase.rpc('is_current_user_admin')
     if (rpcError) return `Error al verificar permisos: ${rpcError.message}`
     if (!data) return 'Este usuario no tiene permisos de administrador'

@@ -309,7 +309,39 @@ const SignUpAuth = () => {
   useEffect(() => {
     const checkProfile = async () => {
       try {
-        // 1. localStorage rápido — solo si ya completó el registro
+        // 1. Leer sesión DIRECTO de localStorage (getSession() cuelga por lock de SDK)
+        let sessionUser: { id: string; email?: string; app_metadata?: Record<string, unknown> } | null = null
+        try {
+          const raw = localStorage.getItem('gandia-auth-token')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            if (parsed?.user?.id) {
+              sessionUser = parsed.user
+            }
+          }
+        } catch { /* ignore */ }
+
+        // Fallback: intentar SDK con timeout de 3 segundos
+        if (!sessionUser) {
+          const sessionPromise = supabase.auth.getSession()
+          const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+          const result = await Promise.race([sessionPromise, timeoutPromise])
+          if (result && 'data' in result && result.data.session?.user) {
+            sessionUser = result.data.session.user
+          }
+        }
+
+        // ─── SIN SESIÓN → limpiar cualquier localStorage corrupto y mostrar formulario ──────
+        if (!sessionUser) {
+          // Limpiar banderas huérfanas que causan la "pantalla negra"
+          localStorage.removeItem('signup-completed')
+          localStorage.removeItem('user-status')
+          localStorage.removeItem('account-id')
+          setCheckingProfile(false)
+          return
+        }
+
+        // 2. localStorage rápido — solo si hay sesión (para optimizar render)
         const completed = localStorage.getItem('signup-completed')
         const localStatus = localStorage.getItem('user-status')
         const localAccountId = localStorage.getItem('account-id')
@@ -320,14 +352,7 @@ const SignUpAuth = () => {
           return
         }
 
-        // 2. Verificar sesión en Supabase
-        const { data: { session } } = await supabase.auth.getSession()
 
-        // ─── SIN SESIÓN → mostrar formulario de auth (usuario nuevo) ──────
-        if (!session?.user) {
-          setCheckingProfile(false)
-          return
-        }
 
         // ─── CON SESIÓN → verificar si ya tiene perfil ────────────────────
         const profile = await getCurrentProfile()
@@ -335,8 +360,8 @@ const SignUpAuth = () => {
         // SIN PERFIL → viene de OAuth o acaba de crear cuenta
         // Mandarlo directo al formulario de datos personales
         if (!profile) {
-          const provider = session.user.app_metadata?.provider as string || 'email'
-          const email = session.user.email || ''
+          const provider = sessionUser.app_metadata?.provider as string || 'email'
+          const email = sessionUser.email || ''
           localStorage.setItem('signup-auth-method', provider)
           if (email) localStorage.setItem('signup-email', email)
           navigate('/signup/personal', { replace: true })
@@ -364,11 +389,20 @@ const SignUpAuth = () => {
         setExistingRejectionReason(rejectionReason)
       } catch (err) {
         console.log('[SignUpAuth] checkProfile error:', err)
+        // En caso de error de red, limpiar flags corruptas
+        localStorage.removeItem('signup-completed')
+        localStorage.removeItem('user-status')
+        localStorage.removeItem('account-id')
       }
       setCheckingProfile(false)
     }
 
-    checkProfile()
+    // Safety timeout: si checkProfile tarda más de 8s, mostrar el formulario de todas formas
+    const safetyTimer = setTimeout(() => {
+      setCheckingProfile(false)
+    }, 8000)
+
+    checkProfile().finally(() => clearTimeout(safetyTimer))
   }, [navigate])
 
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
@@ -548,7 +582,14 @@ const SignUpAuth = () => {
     }
   }
 
-  if (checkingProfile) return <div className="min-h-screen bg-[#0c0a09]" />
+  if (checkingProfile) return (
+    <div className="min-h-screen bg-[#fafaf9] dark:bg-[#0c0a09] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#2FAF8F] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs text-stone-400 dark:text-stone-600">Verificando cuenta...</span>
+      </div>
+    </div>
+  )
 
   if (existingStatus) return (
     <>

@@ -496,42 +496,67 @@ const SignUpConfirmation = () => {
     )
   }
 
+  const isMounted = useRef(true)
+  useEffect(() => { return () => { isMounted.current = false } }, [])
+
   const handleConfirm = async () => {
     if (isSubmitting || isSuccess || !personalData || !institutionalData) return
     setIsSubmitting(true)
     setIsTyping(true)
     setSubmitError(null)
 
-    // Timeout de seguridad: si Supabase no responde en 20s, desbloquear UI
-    const timeoutId = setTimeout(() => {
-      setIsTyping(false)
-      setIsSubmitting(false)
-      setSubmitError('La solicitud tardó demasiado. Verifica tu conexión e intenta de nuevo.')
-    }, 20000)
+    console.log('[SignUpConfirmation] ▶ handleConfirm START')
 
     try {
       const authMethod = localStorage.getItem('signup-auth-method') || 'email'
-      const email = localStorage.getItem('signup-email') || String(personalData.email || '')
 
-      // Obtener userId: primero de la sesión activa, luego de localStorage
-      // Esto resuelve Google OAuth donde signup-user-id nunca se guarda
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      const sessionUserId = currentSession?.user?.id
-      const localUserId = localStorage.getItem('signup-user-id') || undefined
-      const userId = sessionUserId || localUserId
+      // ─── Leer userId y email DIRECTO de localStorage ────────────────────
+      // supabase.auth.getSession() se cuelga, así que leemos del token almacenado
+      let userId = localStorage.getItem('signup-user-id') || ''
+      let email = localStorage.getItem('signup-email') || String(personalData.email || '')
 
-      if (!userId) {
-        // Último recurso: getUser() hace llamada directa a la API
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user?.id) throw new Error('No se pudo obtener la sesión. Recarga e intenta de nuevo.')
-        localStorage.setItem('signup-user-id', user.id)
-      } else {
-        // Guardar para que authService lo encuentre en localStorage
-        localStorage.setItem('signup-user-id', userId)
+      // Leer de gandia-auth-token (siempre tiene userId y email para Google/OAuth)
+      try {
+        const raw = localStorage.getItem('gandia-auth-token')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (!userId && parsed?.user?.id) {
+            userId = parsed.user.id
+            console.log('[SignUpConfirmation] userId from gandia-auth-token:', userId)
+          }
+          if (!email && parsed?.user?.email) {
+            email = parsed.user.email
+            console.log('[SignUpConfirmation] email from gandia-auth-token:', email)
+          }
+        }
+      } catch (e) {
+        console.warn('[SignUpConfirmation] Error parsing gandia-auth-token:', e)
       }
 
+      if (!userId) {
+        // Último intento: getSession con timeout corto de 5 segundos
+        console.log('[SignUpConfirmation] Intentando getSession con timeout...')
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000))
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+        if (result && 'data' in result) {
+          userId = result.data.session?.user?.id || ''
+          if (!email) email = result.data.session?.user?.email || ''
+        }
+      }
+
+      if (!userId) {
+        throw new Error('No se pudo obtener la sesión. Recarga la página e intenta de nuevo.')
+      }
+
+      localStorage.setItem('signup-user-id', userId)
+      if (email) localStorage.setItem('signup-email', email)
+      console.log('[SignUpConfirmation] userId:', userId, 'email:', email)
+      console.log('[SignUpConfirmation] Llamando createUserProfile...')
+      const t0 = Date.now()
+
       let serverAccountId = await createUserProfile({
-        user_id: localStorage.getItem('signup-user-id') || undefined,
+        user_id: userId,
         auth_method: authMethod,
         email,
         role: personalData.role as Role,
@@ -555,6 +580,7 @@ const SignUpConfirmation = () => {
         }
       })
 
+      console.log(`[SignUpConfirmation] createUserProfile completado en ${Date.now() - t0}ms, accountId:`, serverAccountId)
 
       // Si el trigger de DB no generó account_id aún, intentar una vez más
       if (!serverAccountId) {
@@ -566,24 +592,27 @@ const SignUpConfirmation = () => {
         }
       }
 
-      clearTimeout(timeoutId)
+      if (!isMounted.current) return
+
       setIsTyping(false)
+      setIsSubmitting(false)
       setIsSuccess(true)
       setAccountId(serverAccountId)
 
-      ;['signup-auth-method', 'signup-email', 'signup-user-id', 'signup-personal-data', 'signup-institutional-data']
+      ;['signup-auth-method', 'signup-email', 'signup-user-id', 'signup-personal-data', 'signup-institutional-data',
+        'signup-personal-state', 'signup-institutional-state']
         .forEach(k => localStorage.removeItem(k))
       localStorage.setItem('signup-completed', 'true')
       localStorage.setItem('user-status', 'pending')
       if (serverAccountId) localStorage.setItem('account-id', serverAccountId)
 
+      console.log('[SignUpConfirmation] ✓ Éxito total')
+
     } catch (err: unknown) {
-      clearTimeout(timeoutId)
-      // Log completo del error real para depuración
       console.error('[SignUp] ERROR:', err)
 
-      setIsTyping(false)
-      setIsSubmitting(false)
+      if (!isMounted.current) return
+
       const newRetry = retryCount + 1
       setRetryCount(newRetry)
       const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
@@ -599,6 +628,11 @@ const SignUpConfirmation = () => {
       if (newRetry >= 3)
         userMessage += ' Si el problema persiste, contacta soporte: soporte@gandia.mx'
       setSubmitError(userMessage)
+    } finally {
+      if (isMounted.current && !isSuccess) {
+        setIsTyping(false)
+        setIsSubmitting(false)
+      }
     }
   }
 

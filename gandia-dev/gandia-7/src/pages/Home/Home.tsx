@@ -292,24 +292,37 @@ const CookieBanner = ({ isDark }: { isDark: boolean }) => {
 const TrustedMarquee = ({ isDark }: { isDark: boolean }) => {
   const items = [...TRUSTED_ORGS, ...TRUSTED_ORGS]
   return (
-    <div className="overflow-hidden relative">
-      <div className={`absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none ${isDark ? 'bg-gradient-to-r from-[#0c0a09]' : 'bg-gradient-to-r from-white'} to-transparent`} />
-      <div className={`absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none ${isDark ? 'bg-gradient-to-l from-[#0c0a09]' : 'bg-gradient-to-l from-white'} to-transparent`} />
-      <div className="flex items-center gap-6 marquee-track">
-        {items.map((org, i) => (
-          <div
-            key={i}
-            title={org.full}
-            className={`shrink-0 flex items-center gap-2.5 px-4 py-2 rounded-xl border transition-colors whitespace-nowrap cursor-default ${
-              isDark
-                ? 'border-stone-800/60 bg-stone-900/40 text-stone-400 hover:text-stone-200 hover:border-stone-700'
-                : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-700 hover:border-stone-300'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#2FAF8F] opacity-70 shrink-0" />
-            <span className="text-[12px] font-semibold tracking-[0.03em]">{org.name}</span>
-          </div>
-        ))}
+    <div className="py-8">
+      {/* Label */}
+      <div className="flex items-center justify-center gap-4 mb-7">
+        <span className={`h-px w-12 ${isDark ? 'bg-stone-700' : 'bg-stone-300'}`} />
+        <span className={`text-[10px] font-semibold tracking-[0.18em] uppercase ${isDark ? 'text-stone-600' : 'text-stone-400'}`}>
+          Conforme a los marcos regulatorios de
+        </span>
+        <span className={`h-px w-12 ${isDark ? 'bg-stone-700' : 'bg-stone-300'}`} />
+      </div>
+
+      {/* Marquee */}
+      <div className="overflow-hidden relative">
+        <div className={`absolute left-0 top-0 bottom-0 w-20 z-10 pointer-events-none ${isDark ? 'bg-gradient-to-r from-[#0e0c0b]' : 'bg-gradient-to-r from-stone-50/60'} to-transparent`} />
+        <div className={`absolute right-0 top-0 bottom-0 w-20 z-10 pointer-events-none ${isDark ? 'bg-gradient-to-l from-[#0e0c0b]' : 'bg-gradient-to-l from-stone-50/60'} to-transparent`} />
+
+        <div className="flex items-center marquee-track">
+          {items.map((org, i) => (
+            <div
+              key={i}
+              title={org.full}
+              className="shrink-0 flex items-center whitespace-nowrap cursor-default select-none"
+            >
+              <span className={`text-[11px] font-semibold tracking-[0.1em] uppercase transition-colors duration-200 ${isDark ? 'text-stone-500 hover:text-stone-300' : 'text-stone-400 hover:text-stone-600'}`}>
+                {org.name}
+              </span>
+              <span className={`mx-8 font-thin select-none ${isDark ? 'text-stone-700' : 'text-stone-300'}`} aria-hidden>
+                ·
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -1369,8 +1382,8 @@ function Home() {
             </div>
           </section>
 
-          {/* Trusted marquee */}
-          <section className={`py-10 border-b ${divider} ${isDark ? 'bg-[#0e0c0b]' : 'bg-stone-50/60'}`}>
+          {/* Regulatory reference marquee */}
+          <section className={`border-b ${divider} ${isDark ? 'bg-[#0e0c0b]' : 'bg-stone-50/60'}`}>
             <TrustedMarquee isDark={isDark} />
           </section>
 

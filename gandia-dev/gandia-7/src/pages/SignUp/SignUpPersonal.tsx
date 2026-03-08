@@ -444,6 +444,15 @@ const SignUpPersonal = () => {
 
   const closeModal = () => setModal(m => ({ ...m, open: false }))
 
+  // Almacenamiento local persistente del estado del cuestionario
+  useEffect(() => {
+    if (userData.fullName || personalSubStep !== 'name' || messages.length > 0) {
+      localStorage.setItem('signup-personal-state', JSON.stringify({
+        userData, personalSubStep, messages: messages, inputEnabled: inputEnabled
+      }))
+    }
+  }, [userData, personalSubStep, messages, inputEnabled])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -460,6 +469,20 @@ const SignUpPersonal = () => {
     if (!authMethod) {
       navigate('/signup')
       return
+    }
+
+    const savedState = localStorage.getItem('signup-personal-state')
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState)
+        if (parsed.messages && parsed.messages.length > 0) {
+          setUserData(parsed.userData)
+          setPersonalSubStep(parsed.personalSubStep)
+          setMessages(parsed.messages)
+          setInputEnabled(parsed.inputEnabled)
+          return
+        }
+      } catch (e) { console.error('Error restaurando progreso:', e) }
     }
 
     setTimeout(() => {
@@ -482,6 +505,7 @@ const SignUpPersonal = () => {
       'Sí, regresar',
       () => {
         closeModal()
+        localStorage.removeItem('signup-personal-state')
         localStorage.removeItem('signup-personal-data')
         navigate('/signup')
       }

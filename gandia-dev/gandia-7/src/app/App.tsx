@@ -1,94 +1,61 @@
 import { useEffect } from 'react'
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom'
 import Router from './Router'
-import { checkProfileExists, getCurrentProfile } from '../lib/authService'
-import { UserProvider } from '../context/UserContext'
+import { UserProvider, useUser } from '../context/UserContext'
 import { NotificationsProvider } from '../context/NotificationsContext'
-import { supabase } from '../lib/supabaseClient'
 
-// ── Rutas donde el AuthHandler NO debe actuar ────────────────────────────────
+const IGNORE_ROUTES  = ['/splash', '/home', '/blog', '/contacto', '/recursos',
+                        '/legal', '/compliance', '/modelo-operativo', '/admin', '/signup']
 
-// 1. El Splash maneja su propia sesión — no interferir nunca
-// 2. El usuario navega la web pública intencionalmente — dejarlo navegar libre
-const IGNORE_ROUTES = [
-  '/splash',
-  '/home',
-  '/blog',
-  '/contacto',
-  '/recursos',
-  '/legal',
-  '/compliance',
-  '/modelo-operativo',
-]
+const PRIVATE_ROUTES = ['/chat', '/historial', '/notificaciones', '/configuraciones',
+                        '/voz', '/ayuda', '/plan', '/tramites', '/noticias', '/perfil',
+                        '/onboarding', '/tour']
 
-// 3. Ya está en área privada — no redirigir
-const PRIVATE_ROUTES = [
-  '/chat', '/historial', '/notificaciones', '/configuraciones',
-  '/voz', '/ayuda', '/plan', '/tramites', '/noticias', '/perfil',
-  '/onboarding', '/tour',
-]
+const SIGN_OUT_KEYS  = ['signup-auth-method', 'signup-email', 'signup-personal-data',
+                        'signup-institutional-data', 'signup-completed', 'user-status',
+                        'account-id', 'gandia-auth-token']
 
-const AuthHandler = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
+function AuthHandler() {
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const { authStatus, hasProfile, profile, profileReady } = useUser()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth event:', event, '@ path:', location.pathname)
+    // Esperar hasta que:
+    // 1. Supabase resolvió la sesión (authStatus !== 'loading')
+    // 2. fetchProfile terminó (profileReady === true)
+    // Sin esto, AuthHandler ve hasProfile=false mientras el perfil
+    // todavía está cargando y redirige a /signup/personal incorrectamente.
+    if (authStatus === 'loading') return
+    if (!profileReady) return
 
-      // El Splash y las páginas públicas manejan su propio estado — no tocar
-      const ignored = IGNORE_ROUTES.some(r => location.pathname.startsWith(r))
-      if (ignored) return
+    if (authStatus === 'unauthenticated') {
+      SIGN_OUT_KEYS.forEach(k => localStorage.removeItem(k))
+      return
+    }
 
-      // Admin y registro tienen su propio flujo
-      if (location.pathname.startsWith('/admin')) return
-      if (location.pathname.startsWith('/signup')) return
+    const path = location.pathname
+    if (IGNORE_ROUTES.some(r => path.startsWith(r))) return
+    if (PRIVATE_ROUTES.some(r => path.startsWith(r))) return
 
-      // Ya está en área privada — no redirigir
-      const isPrivate = PRIVATE_ROUTES.some(r => location.pathname.startsWith(r))
-      if (isPrivate) return
+    // Desde /login u otras rutas de entrada → redirigir al destino correcto
+    if (!hasProfile) {
+      navigate('/signup/personal', { replace: true })
+      return
+    }
 
-      // ── Desde /login u otras rutas de entrada ────────────────────────────
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
-        const email = session.user.email ?? ''
-        const hasProfile = email ? await checkProfileExists(email) : false
+    if (profile?.status !== 'approved') {
+      if (profile?.account_id) localStorage.setItem('account-id', profile.account_id)
+      localStorage.setItem('signup-completed', 'true')
+      localStorage.setItem('user-status', profile?.status ?? 'pending')
+      navigate('/signup', { replace: true })
+      return
+    }
 
-        if (hasProfile) {
-          try {
-            const profile = await getCurrentProfile()
-            if (profile?.status === 'approved') {
-              const onboardingDone = profile?.onboarding_completed ?? true
-              navigate(onboardingDone ? '/chat' : '/onboarding', { replace: true })
-            } else {
-              const accountId = profile?.account_id || ''
-              localStorage.setItem('signup-completed', 'true')
-              localStorage.setItem('user-status', profile?.status ?? 'pending')
-              if (accountId) localStorage.setItem('account-id', accountId)
-              navigate('/signup', { replace: true })
-            }
-          } catch {
-            navigate('/chat', { replace: true })
-          }
-          return
-        }
+    navigate(profile.onboarding_completed ? '/chat' : '/onboarding', { replace: true })
 
-        // Usuario nuevo sin perfil
-        const provider = (session.user.app_metadata?.provider as string | undefined) ?? 'email'
-        localStorage.setItem('signup-auth-method', provider)
-        if (email) localStorage.setItem('signup-email', email)
-        navigate('/signup/personal', { replace: true })
-      }
-
-      if (event === 'SIGNED_OUT') {
-        ;['signup-auth-method', 'signup-email', 'signup-personal-data',
-          'signup-institutional-data', 'signup-completed', 'user-status', 'account-id',
-        ].forEach(key => localStorage.removeItem(key))
-        navigate('/login', { replace: true })
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [navigate, location.pathname])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, profileReady, hasProfile, profile?.status, profile?.onboarding_completed, profile?.account_id])
 
   return null
 }

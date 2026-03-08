@@ -58,13 +58,37 @@ const FONT_SAMPLE_STYLE: Record<Font, React.CSSProperties> = {
 // ─── SAVE ─────────────────────────────────────────────────────────────────────
 
 async function saveOnboardingPreferences(prefs: Preferences): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No session')
+  // 1. Obtener la sesión segura (o desde localStorage)
+  const rawSession = localStorage.getItem('gandia-auth-token')
+  if (!rawSession) throw new Error('No session')
+  const session = JSON.parse(rawSession)
+  const userId = session.user?.id
+  const accessToken = session.access_token
+
+  if (!userId || !accessToken) throw new Error('No valid session tokens')
+
   const payload = { preferences: prefs, onboarding_completed: true, updated_at: new Date().toISOString() }
-  await Promise.allSettled([
-    supabase.from('user_profiles').update(payload).eq('user_id', user.id),
-    supabase.from('profiles').update(payload).eq('id', user.id),
-  ])
+  
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  // 2. Actualizar el perfil usando fetch directo para evitar el bloqueo del SDK
+  const res = await fetch(`${supabaseUrl}/rest/v1/user_profiles?user_id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': supabaseAnon,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(payload)
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    console.error('[Onboarding] Error actualizando perfil:', errText)
+    throw new Error(`Error HTTP: ${res.status}`)
+  }
 }
 
 function applyPreferences(prefs: Preferences) {

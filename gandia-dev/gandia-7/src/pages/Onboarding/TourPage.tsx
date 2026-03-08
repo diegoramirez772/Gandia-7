@@ -270,19 +270,26 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
       {/* Línea conectora */}
       {lineStyle && <div style={lineStyle} />}
 
-      {/* Card */}
+      {/* Card Wrapper */}
       <div style={{
         position: 'fixed',
-        top, left, transform,
-        width: step.isSplash || step.isFinale ? 'min(480px, calc(100vw - 48px))' : W,
         zIndex: 994,
+        ...(step.isSplash || step.isFinale
+          ? { inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }
+          : { top, left, transform }
+        ),
         animation: 'tour-tooltip-in 380ms cubic-bezier(.16,1,.3,1) both',
+        pointerEvents: 'none' // Solo el wrapper general transparenta los clicks
       }}>
         <div style={{
+          width: step.isSplash || step.isFinale ? '100%' : W,
+          maxWidth: step.isSplash || step.isFinale ? 440 : 'none',
+          pointerEvents: 'auto', // La card sí recibe clicks
           backgroundColor: bg,
           border: `1px solid ${bdr}`,
           borderRadius: 22,
-          overflow: 'hidden',
+          overflowY: 'auto',
+          maxHeight: 'calc(100dvh - 32px)', // height dinámico mobile-friendly
           boxShadow: isDark
             ? '0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(68,64,60,0.4)'
             : '0 32px 64px rgba(0,0,0,0.12), 0 0 0 1px rgba(214,211,208,0.6)',
@@ -293,21 +300,21 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
             background: 'linear-gradient(90deg, #2FAF8F, #1a9070)',
           }} />
 
-          <div style={{ padding: step.isSplash || step.isFinale ? '32px 28px 28px' : '22px 22px 20px' }}>
+          <div style={{ padding: step.isSplash || step.isFinale ? 'clamp(16px, 4vh, 24px) clamp(16px, 4vw, 20px) clamp(16px, 4vh, 20px)' : '22px 22px 20px' }}>
 
             {/* Splash especial */}
             {step.isSplash && (
               <div style={{ textAlign: 'center' }}>
                 {/* Logo */}
                 <div style={{
-                  width: 52, height: 52, borderRadius: 16,
+                  width: 44, height: 44, borderRadius: 14,
                   backgroundColor: 'rgba(47,175,143,0.1)',
                   border: '1px solid rgba(47,175,143,0.25)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 20px',
+                  margin: '0 auto 10px',
                   animation: 'tour-glow 2.8s ease-in-out infinite',
                 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2FAF8F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2FAF8F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                     <path d="M2 17l10 5 10-5"/>
                     <path d="M2 12l10 5 10-5"/>
@@ -318,7 +325,7 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
                   fontFamily: "'Geist', system-ui, sans-serif",
                   fontSize: 10, fontWeight: 700,
                   letterSpacing: '0.14em', textTransform: 'uppercase',
-                  color: '#2FAF8F', marginBottom: 12,
+                  color: '#2FAF8F', marginBottom: 10,
                 }}>
                   GANDIA 7
                 </p>
@@ -326,10 +333,10 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
                 <h1 style={{
                   fontFamily: "'Instrument Serif', Georgia, serif",
                   fontStyle: 'italic',
-                  fontSize: 'clamp(2rem, 5vw, 2.8rem)',
+                  fontSize: 'clamp(1.7rem, 5vw, 2.4rem)',
                   lineHeight: 1.08,
                   color: tx1,
-                  marginBottom: 14,
+                  marginBottom: 6,
                 }}>
                   Bienvenido,<br />
                   <span style={{ color: '#2FAF8F' }}>{userData.nombre}.</span>
@@ -337,9 +344,9 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
 
                 <p style={{
                   fontFamily: "'Geist', system-ui, sans-serif",
-                  fontSize: 14, lineHeight: 1.7,
-                  color: tx2, marginBottom: 28,
-                  maxWidth: 360, margin: '0 auto 28px',
+                  fontSize: 13, lineHeight: 1.5,
+                  color: tx2, marginBottom: 12,
+                  maxWidth: 360, margin: '0 auto 12px',
                 }}>
                   {userData.rancho !== 'tu operación'
                     ? <>Tu operación <strong style={{ color: tx1 }}>{userData.rancho}</strong> ya está en el sistema. Te mostramos lo esencial en 30 segundos.</>
@@ -347,14 +354,14 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
                   }
                 </p>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <button
                     onClick={onNext}
                     style={{
-                      padding: '14px 24px', borderRadius: 13, border: 'none',
+                      padding: '12px 20px', borderRadius: 12, border: 'none',
                       backgroundColor: '#2FAF8F', color: '#fff',
                       fontFamily: "'Geist', system-ui, sans-serif",
-                      fontSize: 14, fontWeight: 600,
+                      fontSize: 13, fontWeight: 600,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       cursor: 'pointer',
                       boxShadow: '0 8px 24px rgba(47,175,143,.3)',
@@ -369,9 +376,9 @@ function Tooltip({ step, rect, stepIndex, totalSteps, onNext, onSkip, isDark, us
                   <button
                     onClick={onSkip}
                     style={{
-                      padding: '10px', border: 'none', backgroundColor: 'transparent',
+                      padding: '8px', border: 'none', backgroundColor: 'transparent',
                       fontFamily: "'Geist', system-ui, sans-serif",
-                      fontSize: 12.5, color: tx2, cursor: 'pointer',
+                      fontSize: 12, color: tx2, cursor: 'pointer',
                       transition: 'color 150ms ease',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.color = tx1)}
